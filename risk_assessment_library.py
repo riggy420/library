@@ -1,6 +1,5 @@
 from hmac import new
 import math
-from flask_migrate import current
 import pandas as pd
 import csv
 import numpy as np
@@ -173,10 +172,10 @@ class risk_assessment_library:
         else:
             if area != "": ### if it is China stock => Unique idenitifer => SS,SZ can expand to others like jp ..
                 self.area= area
-                stock_price_database = r"stock_list/{}/{}.{}.txt".format(self.area,self.name,self.area)
+                stock_price_database = r"stock_data/{}/{}.{}.txt".format(self.area,self.name,self.area)
             else:
                 self.area= "America"
-                stock_price_database = r"stock_list/America/{}.txt".format(self.name)
+                stock_price_database = r"stock_data/America/{}.txt".format(self.name)
 
         f=open(stock_price_database,'r',encoding="utf8") ### opening the files 
         self.strings = f.read().split("\n") ## reading the individual content of the file

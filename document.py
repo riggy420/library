@@ -1,6 +1,7 @@
 from datetime import datetime
 import numpy as np
 from pathlib import Path
+from risk_assessment_library import risk_assessment_library
 
 class document():
 
@@ -14,8 +15,8 @@ class document():
         '''
         stock_price_america = r"stock_list\nasdaqlisted.txt" ## getting the reference 
         ## file from the stock list
-        Path("generatred_file").mkdir(parents=True, exist_ok=True) ## create the directory if it does not exist
-        Path("generatred_file/America").mkdir(parents=True, exist_ok=True) ## create the directory if it does not exist
+        Path("generated_file").mkdir(parents=True, exist_ok=True) ## create the directory if it does not exist
+        Path("generated_file/America").mkdir(parents=True, exist_ok=True) ## create the directory if it does not exist
         filename = "generated_file/America/agpd_america_" + str(self.current_datetime)+"_all_0.001.txt" ## the fila that we are going to write on
 
         list_of_america = [] ## the list of all the stock symbol in America

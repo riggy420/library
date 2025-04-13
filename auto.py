@@ -1,5 +1,6 @@
-from .document import document
+from document import document
 from datetime import datetime
+from risk_assessment_library import risk_assessment_library
 
 class auto(document):
     def __init__(self):
@@ -42,7 +43,7 @@ class auto(document):
                 ending_price = float(string[2])
                 number_of_trade = float(string[3])
                 average_day = float(string[7])+float(string[8])
-                real_volume = float(string[13])*ending_price ## calucating the real volume
+                real_volume = float(string[12])*ending_price ## calucating the real volume
 
                 # print(a.predictiing_volume_of_exchange_using_ema())
                 # print(string)
@@ -86,3 +87,8 @@ class auto(document):
             
             # print(result_array)
             return result_array ## return it
+
+if __name__ == "__main__":
+    auto = auto()
+    auto.returning_the_list_of_under_17(20,0.001,4,2,20,500000)
+    # auto.returning_the_list_of_above_40(40)
