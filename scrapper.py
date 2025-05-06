@@ -11,6 +11,7 @@ from pyrate_limiter import Duration, RequestRate, Limiter
 import time
 import requests_cache
 from pathlib import Path
+from curl_cffi import requests as request 
 
 # import warnings
 # warnings.simplefilter(action="ignore", category=FutureWarning)
@@ -66,9 +67,11 @@ class YFinance:
     #                 "AppleWebKit/537.36 (KHTML, like Gecko) "
     #                 "Chrome/43.0.2357.134 Safari/537.36")
 
-    user_agent_value = ("Mozilla/5.0 (Windows NT 6.1; Win64; x64) " 
-                        "AppleWebKit/537.36 (KHTML, like Gecko) " 
-                        "Chrome/44.0.2403.155 Safari/537.36")
+    # user_agent_value = ("Mozilla/5.0 (Windows NT 6.1; Win64; x64) " 
+    #                     "AppleWebKit/537.36 (KHTML, like Gecko) " 
+    #                     "Chrome/44.0.2403.155 Safari/537.36")
+
+    user_agent_value = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
 
     def __init__(self, ticker):
         self.yahoo_ticker = ticker
@@ -180,29 +183,42 @@ class scrapper():
     def write_to_file(self,index_list,area):
         for indexes in index_list:
             try:
+                session = request.Session(impersonate="chrome")
+                ticker = yf.Ticker(indexes, session=session)
+                df = ticker.history(period='5y', auto_adjust=True)
+                print(df)
+
                 # a= YFinance(indexes)
                 # df = YFinance.get_history(a)
 
-                a= yf.Ticker(indexes) ## oringal one
-                df = a.history(period='5y',auto_adjust=True) ## original one
+                # a= yf.Ticker(indexes) ## oringal one
+                # df = a.history(period='5y',auto_adjust=True) ## original one
 
                 # print(indexes)
                 # df = yf.download(indexes, start="2020-03-07",auto_adjust=True,session= session)
                 # print(df)
 
                 # df = pdr.get_data_yahoo(indexes,start="2019-1-1",end= current_datetime)
-                # print(df)
+                if df.empty:
+                    print("Something is wrong")
+                    break
+                else:
+                    print(indexes+" finished downloading")
                 # break
                 # df = pdr.get_data_yahoo('0'*(6-len(str(indexes+1)))+str(indexes+1)+ "." + place, start="2019-1-1", end=current_datetime,proxy="202.86.138.18:8080") #proxy="173.244.200.156:64631"
-            except:
-                pass
+            except requests.exceptions.RequestException as e:
+                print(f"Request failed: {e}")
             else:
+                if df.empty:
+                    print("Something is wrong")
+                    break
                 if len(df) != 0:
                     # df.drop(['Dividends'],axis = 1)
                     # df.drop(['Stock Splits'],axis = 1)
 
                     df = df[['Close','High','Low','Open','Volume']]
-                    # break
+
+                    # print(df)
 
                     for i in df.index:
                         for j in df:
@@ -225,7 +241,7 @@ class scrapper():
         # print(strings)
         for string in strings:
             string= string.split("|",1)[0]
-            print(string)
+            # print(string)
             self.list_for_america.append(string)
         
         self.write_to_file(self.list_for_america,"America")
@@ -237,7 +253,7 @@ class scrapper():
         # print(strings)
         for string in strings:
             string= string.split(" ",1)[0]
-            print(string)
+            # print(string)
             self.list_for_shenzhen.append(string)
         
         self.write_to_file(self.list_for_shenzhen,"SZ")
@@ -250,7 +266,7 @@ class scrapper():
         # print(strings)
         for string in strings:
             string= string.split(" ",1)[0]
-            print(string)
+            # print(string)
             self.list_for_shanghai.append(string)
 
         self.write_to_file(self.list_for_shanghai,"SS")
