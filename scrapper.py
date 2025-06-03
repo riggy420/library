@@ -31,15 +31,13 @@ session = CachedLimiterSession(
 )
 
 
-current_datetime = datetime.now().strftime("%Y-%m-%d")
+current_datetime = datetime.now()
 print(current_datetime)
 
 import requests_cache
 
 session = requests_cache.CachedSession('yfinance.cache')
 session.headers['User-agent'] = 'my-program/1.0'
-current_datetime = datetime.now().strftime("%Y-%m-%d")
-print(current_datetime)
 
 Places = ['SZ']
 Placess=['SS']
@@ -180,13 +178,54 @@ class scrapper():
         elif area == "SZ":
             self.shenzhen()
 
+    def run(self, *args):
+        print(*args)
+
     def write_to_file(self,index_list,area):
         for indexes in index_list:
             try:
+                print("Now working on "+indexes)
                 session = request.Session(impersonate="chrome")
-                ticker = yf.Ticker(indexes, session=session)
-                df = ticker.history(period='5y', auto_adjust=True)
-                print(df)
+
+                filename = 'stock_data/'+str(area)+"/"+indexes+'.txt'
+                refreshing = False
+                if Path(filename).exists():
+                    print("Checking the last updated date")
+                    last_updated_date = pd.read_csv(filename, header=None, quoting=csv.QUOTE_NONNUMERIC).iloc[-1, 0]
+                    
+                    last_updated_date = pd.to_datetime(last_updated_date.split(" ")[0], format='%Y-%m-%d')
+                    if last_updated_date.strftime('%Y-%m-%d') == current_datetime.strftime("%Y-%m-%d"):
+                        print("Already updated")
+                        continue
+                    else:
+                        print((current_datetime-last_updated_date).days)
+                        df = pd.DataFrame()
+
+                        match ((current_datetime-last_updated_date).days) :
+                            case 0:
+                                print("Already updated and should be ready to use")
+                                continue
+                            case 1:
+                                if current_datetime.hour < 5:
+                                    continue
+
+                                ticker = yf.Ticker(indexes, session=session)
+                                df = ticker.history(period='1d', auto_adjust=True)
+                                print("Updated for 1 day")
+                            case 2|3|4:
+                                ticker = yf.Ticker(indexes, session=session)
+
+                                df = ticker.history(period='5d', auto_adjust=True)
+                                print("Updated for 5 days")
+                            case _:
+                                print("Refreshing for 5 years")
+                                ticker = yf.Ticker(indexes, session=session)
+                                refreshing = True
+                                df = ticker.history(period='5y', auto_adjust=True)
+
+                
+                
+                # print(df)
 
                 # a= YFinance(indexes)
                 # df = YFinance.get_history(a)
@@ -195,23 +234,23 @@ class scrapper():
                 # df = a.history(period='5y',auto_adjust=True) ## original one
 
                 # print(indexes)
-                # df = yf.download(indexes, start="2020-03-07",auto_adjust=True,session= session)
+                # df = yf.download(indexes, start="2020-03-07",auto_adjust=True,progress=False, threads=False)
                 # print(df)
 
                 # df = pdr.get_data_yahoo(indexes,start="2019-1-1",end= current_datetime)
                 if df.empty:
                     print("Something is wrong")
-                    break
                 else:
                     print(indexes+" finished downloading")
                 # break
                 # df = pdr.get_data_yahoo('0'*(6-len(str(indexes+1)))+str(indexes+1)+ "." + place, start="2019-1-1", end=current_datetime,proxy="202.86.138.18:8080") #proxy="173.244.200.156:64631"
             except requests.exceptions.RequestException as e:
                 print(f"Request failed: {e}")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                continue
             else:
-                if df.empty:
-                    print("Something is wrong")
-                    break
+
                 if len(df) != 0:
                     # df.drop(['Dividends'],axis = 1)
                     # df.drop(['Stock Splits'],axis = 1)
@@ -223,12 +262,19 @@ class scrapper():
                     for i in df.index:
                         for j in df:
                             df.loc[i,j] = round(df.loc[i,j],2)
-
+                    
+                    print(df)
                     df = df.astype(str)
 
-                    Path("stock_data").mkdir(parents=True, exist_ok=True)
-                    Path("stock_data/"+str(area)).mkdir(parents=True, exist_ok=True)
-                    df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC)
+                    filename = 'stock_data/'+str(area)+"/"+indexes+'.txt'
+                    if Path(filename).exists() == False or refreshing:
+                        Path("stock_data").mkdir(parents=True, exist_ok=True)
+                        Path("stock_data/"+str(area)).mkdir(parents=True, exist_ok=True)
+                        df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC)
+                    else:
+                        df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,mode="a")
+
+                    time.sleep(1)  # Sleep for 1 second to avoid hitting the rate limit
                 else:
                     print("This Code Doesn't Exist")
             finally:
@@ -242,8 +288,9 @@ class scrapper():
         for string in strings:
             string= string.split("|",1)[0]
             # print(string)
-            self.list_for_america.append(string)
-        
+            self.list_for_america.append(string)     
+
+        self.list_for_america = ["ACCD"]       
         self.write_to_file(self.list_for_america,"America")
 
     def shenzhen(self):
@@ -278,7 +325,9 @@ def main():
     # s.shanghai()
 
 if __name__ == "__main__":
-    s = scrapper("America")
+    import sys
+    s = scrapper(sys.argv[1])  # Pass the area as a command line argument
+    # s = scrapper("America")
 
 
 

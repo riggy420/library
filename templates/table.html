@@ -1,0 +1,51 @@
+{% extends "table_base.html" %}
+
+{% block content %}
+  <table id="data" class="table table-striped">
+    <thead>
+      <tr>
+        <th>Stock_ID</th>
+        <th>AGPD_value</th>
+        <th>Current_Price</th>
+        <th>Number_of_Trade</th>
+        <th>Day_last_update</th>
+        <th>W_buy_value</th>
+        <th>W_sell_value</th>
+        <th>Average day</th>
+        <th>Day standard deviation</th>
+        <th>W_moderate_diff</th>
+        <th>Five day average</th>
+        <th>Day has been</th>
+        <th>Average Volume</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    $(document).ready(function () {
+      $('#data').DataTable({
+        ajax: '/api/data',
+        serverSide: true,
+        columns: [
+          {data: 'stockid'},
+          {data: 'agpd_value'},
+          {data: 'current_price', orderable: false},
+          {data: 'number_of_trade'},
+          {data: 'day_last_update', orderable: false},
+            {data: 'w_buy'},
+            {data: 'w_sell'},
+            {data: 'average_day', orderable: false},
+            {data: 'day_standard_deviation', orderable: false},
+            {data: 'W_moderate_diff', orderable: false},
+            {data: 'five_day_average', orderable: false},
+            {data: "day_has_been", orderable:true},
+            {data: "average_volume", orderable:true}
+        ],
+      });
+    });
+  </script>
+{% endblock %}

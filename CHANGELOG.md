@@ -25,3 +25,9 @@
 ### Modified
 
 - scrapper.py as it fails to work
+
+## 1.0.3 - 2025-06-04
+
+### Modified
+
+- scrapper.py as we are introducing a new feature where we just keep on appending new pandas dataframe 

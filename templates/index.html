@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block head %}
+        <title>LDR is gay</title>
+
+<link rel="stylesheet"  type="text/css" href="{{url_for('.static', filename='index.css')}}">
+
+
+{% endblock head %}
+
+{% block body %}
+
+
+
+<!-- {% if error%}
+<p><strong>{{error}}</strong></p>
+{% endif%} -->
+
+{% with messages=get_flashed_messages(with_categories=true) %}
+ {% for category, message in messages %}
+  <div class='alert alert-{{category}} text-center alert-dismissible fade show m-auto'>
+    {{ message }}
+   </div>
+ {% endfor %}
+{% endwith %}
+
+<h2> Please input the region and StockID</h2>
+
+<h3> If the region selected is America, please leave the region as blank</h3>
+<form method="post" action="{{ url_for('result') }}">
+<label for="Region">Region:</label>
+<input type="text" id="region" name="region" placeholder="region">
+<br>
+<label for="ID">ID:</label>
+<input type="text" id="ID" name="ID" placeholder="ID">
+<br>
+
+<h3> Here is the optional details that is needed for other options - Given_price and price_when certain plus current</h3>
+<br>
+<label for="Price">Price:</label>
+<input type="text" id="Price" name="Price" placeholder="Price">
+
+<br>
+
+<label for="W_sell_diff">W_sell_diff:</label>
+<input type="text" id="W_sell_diff" name="W_sell_diff" placeholder="W_sell_diff">
+
+<br>
+<div name="button-container_for_searching">
+<button type="submit" name="btn" value="Searching_for_one">Searching_for_one</button>
+<button type="submit" name="btn" value="Fall_to_20">Fall_to_20</button>
+<button type="submit" name="btn" value="Rise_to_40">Rise_to_40</button>
+<button type="submit" name="btn" value="Reflective_Price">Given Price predict W_sell_diff</button>
+<button type="submit" name="btn" value="Price_when_ten_plus_current">Price_when_input_value_plus_current</button>
+</div>
+<br/>
+<div name="button-container_for_updating_and_general">
+<button type="submit" name="btn" value="Update_China">Update_China</button>
+<button type="submit" name="btn" value="Update_America">Update_America</button>
+<button type="submit" name="btn" value="General_Update_in_America">General_Update_in_America</button>
+<button type="submit" name="btn" value="General_Update_in_China">General_Update_in_China</button>
+</div>
+
+<select id="selectvalue" name="industry">
+{% for n in industry %}
+        <option value="{{n}}">{{ n }}</option>
+{% endfor %}
+</select>  
+
+<div name="spectific_indystry">
+<button type="submit" name="btn" value="Submit">Submit</button>
+<button type="submit" name="btn" value="Update">Update</button>
+<button type="submit" name="btn" value="Overview">Overview</button>
+<button type="submit" name="btn" value="Update_all">Update_all</button>
+</div>
+<br/>
+
+
+<p> Welcome </p>
+{% endblock body %}
+ 

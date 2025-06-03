@@ -8,7 +8,7 @@ class document():
     def __init__(self):
         self.current_datetime = datetime.now().strftime("%Y-%m-%d")
 
-    def America(self):
+    def America(self,agpd=0.001,number_of_trade=4,ending_price=2,volume=500000):
         '''
         This function is to get the list of all the stock in America and return as a file, comprising of 
         the stock name, stock symbol, stock price, stock volume, stock market cap, stock sector, stock industry, stock country
@@ -52,7 +52,7 @@ class document():
                 print(a.average_volume)
                 
                 with open(filename, "a+") as f:
-                    if (a.agpd > 0.001 and a.number_of_trade>= 4 and a.agpd != 1 and float(a.list_of_ending_price[-1])>2 and a.W_moderate_list[-1] >0 and a.average_volume>500000):
+                    if (a.agpd > agpd and a.number_of_trade>= number_of_trade and a.agpd != 1 and float(a.list_of_ending_price[-1])>ending_price and a.W_moderate_list[-1] >0 and a.average_volume>volume):
                         f.write(i + "," + str(a.agpd) + "," + str(a.list_of_ending_price[-1]) + "," + str(a.number_of_trade) + "," + str(a.W_moderate_list[-1]) + "," + str(a.W_sell_list[-1]) + "," +str(a.list_of_date[-1])+ "," + str(a.average_day) + "," + str(a.day_std_deviation) + ","+ str(percentage_difference_in_W_moderate)+","+ str(five_day_average_of_W_buy) + ","+ str(days_have_been)+ ","+str(a.average_volume)+ "\n")
 
             except IndexError: 

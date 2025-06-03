@@ -146,6 +146,8 @@ class risk_assessment_library:
     W_moderate_list_within_class=np.array([],dtype=np.float64) ## initial value for W moderate list within class
     elasped_day_list = np.array([],dtype=np.float64) ## initial value for elasped day list
     W_sell_list_within_class = np.array([],dtype=np.float64) ## initial value for W sell list within class
+    winrate = 0 ## initial value for winrate
+    average_day = 0 ## initial value for average day
 
     def __init__(self,name,area=""):
         '''
@@ -199,7 +201,7 @@ class risk_assessment_library:
         self.W_moderate_list,self.W_sell_list = self.W_moderate() ## combining and running thr W moderate forumla 
         # print(self.W_moderate_list_within_class)
         self.ag, self.agpd,self.number_of_trade,self.average_day, self.day_std_deviation,self.revenue_per_year = self.income() ## doing the final analysis and testing it through the past data by adding the virtual money and see
-        self.average_volume = np.mean(self.list_of_volume_of_exchange)  ## calucating the average of all
+        self.average_volume = np.mean(self.list_of_volume_of_exchange)*self.list_of_ending_price[-1]  ## calucating the average of all
         # self.close()
 
     def split_string(self):
@@ -802,6 +804,8 @@ class risk_assessment_library:
         self.current_price =0 
         self.current_price_list = np.array([]) ## initial value for current price list
         self.list_of_reflection = np.array([]) ## initial value for list of reflection
+        self.W_moderate_list = np.array([]) ## initial value for W moderate list
+        self.W_sell_list = np.array([])
         self.W_moderate_list_within_class=np.array([]) ## initial value for W moderate list within class
         self.elasped_day_list = np.array([]) ## initial value for elasped day list
         self.W_sell_list_within_class = np.array([]) ## initial value for W sell list within class
@@ -809,7 +813,7 @@ class risk_assessment_library:
 if __name__ == "__main__":
     ## demo program for running the thing
     time1 = time.time_ns() ##recording the time
-    a = risk_assessment_library("AADR") ## running the object and get the object
+    a = risk_assessment_library("PLL") ## running the object and get the object
     print(a.number_of_trade)
     # a.close()
     time2 = time.time_ns() ## marking the running time
