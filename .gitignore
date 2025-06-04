@@ -4,3 +4,4 @@ stock_data
 yfinance.cache
 generated_file/
 control_experiment.py
+webpage/

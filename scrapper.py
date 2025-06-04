@@ -182,6 +182,8 @@ class scrapper():
                 self.shanghai()
             elif area == "SZ":
                 self.shenzhen()
+            elif area == "China":
+                self.China()
 
     def run(self, *args):
         print(*args)
@@ -210,10 +212,10 @@ class scrapper():
                         df = pd.DataFrame()
 
                         match ((current_datetime-last_updated_date).days) :
-                            case 0:
+                            case 0|1:
                                 print("Already updated and should be ready to use")
                                 continue
-                            case 1|2:
+                            case 2:
                                 if current_datetime.hour < 20 and (current_datetime-last_updated_date).days == 1:
                                     continue
 
@@ -324,6 +326,10 @@ class scrapper():
 
         self.write_to_file(self.list_for_shanghai,"SS")
 
+    def China(self):
+        self.shanghai()
+        self.shenzhen()
+
 def main():
     s = scrapper()
     s.America()
@@ -332,11 +338,17 @@ def main():
 
 if __name__ == "__main__":
     import sys
-    if sys.argv[2] != None:
-        s = scrapper(sys.argv[1], sys.argv[2])
+    if len(sys.argv) == 2:
+        s = scrapper(sys.argv[1])
     else:
-        s = scrapper(sys.argv[1])  # Pass the area as a command line argument
-    # s = scrapper("America")
+        s = scrapper(sys.argv[1], sys.argv[2])
+
+
+    # if sys.argv[2] != None:
+    #     s = scrapper(sys.argv[1], sys.argv[2])
+    # else:
+    #     s = scrapper(sys.argv[1])  # Pass the area as a command line argument
+    # # s = scrapper("America")
 
 
 
