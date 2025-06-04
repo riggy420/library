@@ -53,6 +53,8 @@ class try_out(risk_assessment_library):
         self.close() ### clearing the file first => Idk why can have error if you are spamming it for too long time
         self.name=stock_symbol ## idetnifier for the object
         self.stock_symbol = stock_symbol ## identifier for the stock symbol
+        self.W_buy = W_buy ## the W_buy value
+        self.W_sell = W_sell ## the W_sell value
         if area == "industry" : ## if you are doing the overivew of the industry => Probably go here
             self.area = "industry" ## remove the area tag 
             stock_price_database = "/home/ricky/Documents/china_stock_industry_catego/{}.xlsx".format(self.name)
@@ -67,31 +69,41 @@ class try_out(risk_assessment_library):
                 stock_price_database = r"stock_data/America/{}.txt".format(self.name)
 
         past_record = "generated_file/America/stock_data/{}.txt".format(self.name) ## the past record of the data
-        if os.path.exists(past_record): ## if the past record exists
+        if os.path.exists(past_record): ## if the past record exists and what if the record is empty tho? 
             self.getting_the_list_from_the_file(past_record)
 
-            ### Check if the past record is up to date or not 
+            ## Check if the past record is up to date or not 
             import pandas as pd
             from pandas.tseries.holiday import USFederalHolidayCalendar
             from pandas.tseries.offsets import CustomBusinessDay
             US_BUSINESS_DAY = CustomBusinessDay(calendar=USFederalHolidayCalendar())
-            print(US_BUSINESS_DAY)
+            # # print(US_BUSINESS_DAY)
             current_datetime = datetime.now() ## get the current datetime
-            truth_last_day = current_datetime - 2* US_BUSINESS_DAY ## get the last day of the business day
-            truth_last_day = truth_last_day.strftime("%Y-%m-%d") ## get the last day of the business day in string format
+            truth_last_day = current_datetime -timedelta(days=1)## get the last day of the business day
             print(truth_last_day)
             last_date = str(self.list_of_date[-1])
             print("Current date: ", current_datetime)
             print("Last date in the past record: ", last_date)
 
 
-            if truth_last_day != last_date :
+            if truth_last_day.strftime("%Y-%m-%d") != last_date :
                 ## need to update
-                print("The past record is not up to date, need to update the data")
+                print("The past record is not up to date, need to update the data and use the scrapper and should be able to call for the indivudal one")
 
                 ## I am thinking about calling the scrapper automatically 
             else:
                 print("Can use the past record")
+
+            # print("The past record exists, we can use it")
+
+            for i in range(len(self.list_of_ending_price)-self.a):
+
+                if self.W_moderate_list[i] < W_buy: ## if the W_moderate is less than W_buy
+                    self.comparing_date_purchase = np.append(self.comparing_date_purchase,i+self.a) ## append the indices of the purchase date to comparing date purchase
+                    self.list_of_reflection = np.append(self.list_of_reflection,i) ## append the value to the list
+                if self.W_sell_list[i] > W_sell:
+                    self.comparing_date_sell_off = np.append(self.comparing_date_sell_off,i+self.a) ## append the indices of the date that we ought to sell off to the comparing date sell off
+        
 
 
         else: ## if the past record does not exist
@@ -104,6 +116,7 @@ class try_out(risk_assessment_library):
                 num_of_data = self.split_string_for_industry()
             else:
                 num_of_data = self.split_string()
+                # print(self.list_of_date) ## print the first string to see if it is correct or not
 
             if num_of_data == 10: ## filter the stocks with not enough data
                 self.agpd = -100
@@ -407,6 +420,8 @@ class try_out(risk_assessment_library):
                 self.W_moderate_list = np.append(self.W_moderate_list,float(string[10]))
                 self.W_sell_list = np.append(self.W_sell_list,float(string[11]))
 
+            print(self.list_of_date)  ## print the first string to see if it is correct or not
+
 
     def document_overview_winrate(self,winrate_requirement:float):
             # Example usage of the try_out class
@@ -472,18 +487,17 @@ def exporting_to_document():
     for string in strings:  ## for each string in the strings
         list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
 
-    # list_of_america = +["KRYS"] ## just for testing purpose, we can remove this later on
+    # list_of_america = ["KRYS"] ## just for testing purpose, we can remove this later on
     for i in list_of_america:
         try:
             print(i)
 
             filename = "generated_file/America/stock_data/{}.txt".format(i)
-                    
+
+            a = try_out(i,W_buy = 17,W_sell =26) ## get the risk assessment library
             Path("generated_file/America/stock_data").mkdir(parents=True, exist_ok=True) ## create the directory if it does not exist
             with open(filename,'a+') as f: ## prepare the file
                 f.write("Date,Opening_Price,Closing_Price,Maximum_Price,Minimum_Price,Volume_of_Exchange,MFI,RSI,K,D,W_moderate,W_sell\n") ## writing the header for the file
-
-            a = try_out(i,W_buy = 17,W_sell =26) ## get the risk assessment library
 
             for i in range(15,len(a.list_of_opening_price)):
                 with open(filename, "a+") as f:
@@ -513,7 +527,7 @@ if __name__ == "__main__":
 
 
 
-    stock_symbol = "KRYS"  # Example stock symbol
+    stock_symbol = "BCAB"  # Example stock symbol
     trying = try_out(stock_symbol, W_buy=17, W_sell=26)  # Create an instance of the try_out class
     # Example usage of the try_out class
     # exporting_to_document()  # Export the data to a document

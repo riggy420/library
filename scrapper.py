@@ -169,18 +169,26 @@ class scrapper():
     list_for_america = []
     area = ""
 
-    def __init__(self,area):
+    def __init__(self,area,spectific_id=None):
         self.area = area
-        if area == "America":
-            self.America()
-        elif area == "SS":
-            self.shanghai()
-        elif area == "SZ":
-            self.shenzhen()
+        self.spectific_id=spectific_id
+        if spectific_id is not None:
+            print("Specific ID provided: " + spectific_id)
+            self.scrap_specific_id_from_list([spectific_id], area)
+        else:
+            if area == "America":
+                self.America()
+            elif area == "SS":
+                self.shanghai()
+            elif area == "SZ":
+                self.shenzhen()
 
     def run(self, *args):
         print(*args)
 
+    def scrap_specific_id_from_list(self, index_list, area):
+        self.write_to_file(index_list, area)
+    
     def write_to_file(self,index_list,area):
         for indexes in index_list:
             try:
@@ -205,14 +213,14 @@ class scrapper():
                             case 0:
                                 print("Already updated and should be ready to use")
                                 continue
-                            case 1:
-                                if current_datetime.hour < 5:
+                            case 1|2:
+                                if current_datetime.hour < 20 and (current_datetime-last_updated_date).days == 1:
                                     continue
 
                                 ticker = yf.Ticker(indexes, session=session)
                                 df = ticker.history(period='1d', auto_adjust=True)
                                 print("Updated for 1 day")
-                            case 2|3|4:
+                            case 3|4|5:
                                 ticker = yf.Ticker(indexes, session=session)
 
                                 df = ticker.history(period='5d', auto_adjust=True)
@@ -257,13 +265,11 @@ class scrapper():
 
                     df = df[['Close','High','Low','Open','Volume']]
 
-                    # print(df)
-
                     for i in df.index:
                         for j in df:
-                            df.loc[i,j] = round(df.loc[i,j],2)
+                            df.loc[i,j] = round(float(df.loc[i,j]),2)
                     
-                    print(df)
+                    # print(df)
                     df = df.astype(str)
 
                     filename = 'stock_data/'+str(area)+"/"+indexes+'.txt'
@@ -274,7 +280,7 @@ class scrapper():
                     else:
                         df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,mode="a")
 
-                    time.sleep(1)  # Sleep for 1 second to avoid hitting the rate limit
+                    # time.sleep(1)  # Sleep for 1 second to avoid hitting the rate limit
                 else:
                     print("This Code Doesn't Exist")
             finally:
@@ -290,7 +296,7 @@ class scrapper():
             # print(string)
             self.list_for_america.append(string)     
 
-        self.list_for_america = ["ACCD"]       
+        # self.list_for_america = ["BCAB","BCAN","BCAL"]       
         self.write_to_file(self.list_for_america,"America")
 
     def shenzhen(self):
@@ -326,7 +332,10 @@ def main():
 
 if __name__ == "__main__":
     import sys
-    s = scrapper(sys.argv[1])  # Pass the area as a command line argument
+    if sys.argv[2] != None:
+        s = scrapper(sys.argv[1], sys.argv[2])
+    else:
+        s = scrapper(sys.argv[1])  # Pass the area as a command line argument
     # s = scrapper("America")
 
 
