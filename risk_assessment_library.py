@@ -119,8 +119,8 @@ class risk_assessment_library:
     W_value = 0
     a = 0 
     mfr = 0
-    comparing_date_purchase = np.array([],dtype=np.float64) ## initial value for comparing date purchase
-    comparing_date_sell_off = np.array([],dtype=np.float64) ## initial value for comparing date sell
+    comparing_date_purchase = np.array([],dtype=np.float64) #: the indices of the purchase date in the list of_date to comparing date purchase
+    comparing_date_sell_off = np.array([],dtype=np.float64) #: the indices of the date that we ought to sell off to the comparing date sell off
     strings = np.array([],dtype=np.float64) ## initial value for strings
     x =0
     actual_purchase = np.array([],dtype=np.float64) ## initial value for actual purchase
