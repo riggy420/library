@@ -132,7 +132,7 @@ class try_out(risk_assessment_library):
             self.W_moderate_list,self.W_sell_list = self.W_moderate(W_buy,W_sell) ## combining and running thr W moderate forumla 
             # print(self.W_moderate_list_within_class)
 
-        self.ag, self.agpd,self.number_of_trade,self.average_day, self.day_std_deviation,self.revenue_per_year = self.income() ## doing the final analysis and testing it through the past data by adding the virtual money and see
+        self.ag, self.agpd,self.number_of_trade,self.average_day, self.day_std_deviation,self.revenue_per_year,self.absolut_trade_winrate,self.draw_win_winrate,self.draw_lose_winrate,self.lose_winrate = self.income() ## doing the final analysis and testing it through the past data by adding the virtual money and see
         self.average_volume = np.mean(self.list_of_volume_of_exchange)*self.list_of_ending_price[-1]  ## calucating the average of all
         # self.close()
 
@@ -211,6 +211,12 @@ class try_out(risk_assessment_library):
 
         win_trade = 0
         trade_count = 0
+        absolute_win_trade_count = 0 ## trade that is win for more than 3%
+        draw_win_trade_count = 0 ## trade that acheive when W_sell >= 26 and get some money afterward
+        draw_lost_trade_count = 0 ## trade that acheive when W_sell >= 26 and lose some money afterward
+        lose_trade_count = 0 ## trade that is lose for more than 3%
+        draw_trade_count = 0 ## trade that acheived when W_sell >= 26
+        draw_trade_start_day = np.array([]) ## the day that we start the draw trade
 
         past_record = 0 ## just an indicator variable so that we just don't keep on buying and we can have a like a gap
 
@@ -230,7 +236,7 @@ class try_out(risk_assessment_library):
             # print("the date that we are going to buy is:", self.comparing_date_purchase[int(i)])
             past_record = int(self.comparing_date_purchase[int(i)])
             j = 0 ## pointer value for the sell off date    
-            while j <= date_sell_off:
+            while j < date_sell_off:
                 if self.comparing_date_sell_off[int(j)] - self.comparing_date_purchase[int(i)]>=0:
                     self.actual_actual_purchase = np.append(self.actual_actual_purchase,self.comparing_date_purchase[int(i)]) ## append the value to the list
                     sell_early = False
@@ -241,6 +247,7 @@ class try_out(risk_assessment_library):
                             sell_early = True
                             # print("The sell early: ",self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*1.03 )
                             selling_date = np.append(selling_date,self.list_of_date[int(k)]) ## append the date to the selling date list => When we sell and append it to the list
+                            absolute_win_trade_count += 1 ## increment the absolute win trade count
                             break
                         elif self.list_of_minimum_price[k] <= self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95:
                             # print("This drop off early: ",self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95 )
@@ -250,6 +257,7 @@ class try_out(risk_assessment_library):
                             self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95)
                             drop_too_much = True
                             selling_date = np.append(selling_date,self.list_of_date[int(k)]) ## append the date to the selling date list => When we sell and append it to the list
+                            lose_trade_count += 1 ## increment the lose trade count
                             # print("This drop off early: ",self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95)
                             ## the hot added feature 
                             ## when broke and then we re - purchase again 
@@ -277,7 +285,9 @@ class try_out(risk_assessment_library):
 
                     if not sell_early and not drop_too_much: ## if we didn't sell early / wait until W_sell >= 26
                         self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.list_of_ending_price[int(self.comparing_date_sell_off[int(j)])])
-                        selling_date = np.append(selling_date,self.list_of_date[int(self.comparing_date_sell_off[int(j)])]) ## append the date to the selling date list => When we sell and append it to the list                    
+                        selling_date = np.append(selling_date,self.list_of_date[int(self.comparing_date_sell_off[int(j)])]) ## append the date to the selling date list => When we sell and append it to the list  
+                        draw_trade_count += 1 ## increment the draw trade count
+                        draw_trade_start_day = np.append(draw_trade_start_day,self.list_of_date[int(self.comparing_date_purchase[int(i)])]) ## append the date to the draw trade start day list                  
 
                     buying_date = np.append(buying_date,self.list_of_date[int(self.comparing_date_purchase[int(i)])]) ## append the date to the buying date list => When we buy and append it to the list
                     break
@@ -332,26 +342,26 @@ class try_out(risk_assessment_library):
         #  
         ####
 
-        # self.buy_at_ending_price = np.unique(self.buy_at_ending_price) ## remove the duplicate values in the list
-        # self.sell_at_ending_price = np.unique(self.sell_at_ending_price) ## remove the duplicate values in the list
-        # print("buying price : ",self.buy_at_ending_price)
-        # print("selling price : ",self.sell_at_ending_price)
-        # print("One to one corrspondence between buying and selling date: ", len(buying_date) == len(selling_date)) ## check if the length of the buying date and selling date are the same
-        # for i in range(len(buying_date)):
-        #     print("buying date : ",buying_date[i]) ## print the buying date
+        self.buy_at_ending_price = np.unique(self.buy_at_ending_price) ## remove the duplicate values in the list
+        self.sell_at_ending_price = np.unique(self.sell_at_ending_price) ## remove the duplicate values in the list
+        print("buying price : ",self.buy_at_ending_price)
+        print("selling price : ",self.sell_at_ending_price)
+        print("One to one corrspondence between buying and selling date: ", len(buying_date) == len(selling_date)) ## check if the length of the buying date and selling date are the same
+        for i in range(len(buying_date)):
+            print("buying date : ",buying_date[i]) ## print the buying date
 
-        # self.buy_at_ending_price,self.sell_at_ending_price= self.removing_stuff_from_the_list(self.buy_at_ending_price,self.sell_at_ending_price) ## remove the duplicate values in the list
-        # result_list_for_selling_dates,indices,unique_indices_for_buying_list = self.remove_duplicate_with_indices(buying_date,selling_date) ## remove the duplicate values in the list
+        self.buy_at_ending_price,self.sell_at_ending_price= self.removing_stuff_from_the_list(self.buy_at_ending_price,self.sell_at_ending_price) ## remove the duplicate values in the list
+        result_list_for_selling_dates,indices,unique_indices_for_buying_list = self.remove_duplicate_with_indices(buying_date,selling_date) ## remove the duplicate values in the list
         
-        # print("result list for buying price : ",self.buy_at_ending_price) ## print the result list for selling dates
-        # print("result list for selling price : ",self.sell_at_ending_price) ## print the result list for buying dates
-        # print("One to one corrspondence between buying and selling date: ", len(self.buy_at_ending_price) == len(self.sell_at_ending_price)) ## check if the length of the buying date and selling date are the same
+        print("result list for buying price : ",self.buy_at_ending_price) ## print the result list for selling dates
+        print("result list for selling price : ",self.sell_at_ending_price) ## print the result list for buying dates
+        print("One to one corrspondence between buying and selling date: ", len(self.buy_at_ending_price) == len(self.sell_at_ending_price)) ## check if the length of the buying date and selling date are the same
 
-        # print("Number of trades : ",len(self.buy_at_ending_price)) ## print the number of trades
-        # print("Number of sell_of: ",len(self.sell_at_ending_price)) ## print the number of buy in
+        print("Number of trades : ",len(self.buy_at_ending_price)) ## print the number of trades
+        print("Number of sell_of: ",len(self.sell_at_ending_price)) ## print the number of buy in
 
-        # print("buying date : ",buying_date) ## print the buying date
-        # print("selling date : ",selling_date) ## print the selling date
+        print("buying date : ",buying_date) ## print the buying date
+        print("selling date : ",selling_date) ## print the selling date
 
         # for i in range(len(self.buy_at_ending_price)):
         for i in range(len(buying_date)):
@@ -386,6 +396,12 @@ class try_out(risk_assessment_library):
             self.total_revenue = np.append(self.total_revenue,difference) ## append the revenue to the list
             if (difference > 0):
                 win_trade+=1
+                if buying_date[i] in draw_trade_start_day: ## if the buying date is in the draw trade start day
+                    draw_win_trade_count += 1 ## increment the draw win trade count
+            else:
+                if buying_date[i] in draw_trade_start_day:
+                    draw_lost_trade_count += 1 ## increment the draw lost trade count
+            
             
             trade_count+=1
 
@@ -418,7 +434,7 @@ class try_out(risk_assessment_library):
         print("win rate : ",self.win_rate)
         print("Number of trades : ",len(self.elasped_day))
         self.average_day = average_day
-        return ag,agpd,len(self.elasped_day),average_day,day_std_deviation,revenue_per_year
+        return ag,agpd,len(self.elasped_day),average_day,day_std_deviation,revenue_per_year,absolute_win_trade_count/trade_count,draw_win_trade_count/trade_count,draw_lost_trade_count/trade_count,lose_trade_count/trade_count
     
     def getting_the_list_from_the_file(self,filename):
         '''
@@ -470,8 +486,10 @@ def document_overview_winrate(winrate_requirement:float):
     for string in strings:  ## for each string in the strings
         list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
 
+    list_of_america= ["XLO"]
+
     with open(filename,'a+') as f: ## prepare the file
-        f.write("Stock_ID" + " " + "AGPD_value " + "Number_of_Trade"+ " "+"Average_Day" + " " + "Average_WinRate"+"\n")
+        f.write("Stock_ID" + " " + "AGPD_value " + "Number_of_Trade"+ " "+"Average_Day" + " " + "Average_WinRate"+" "+"absolute_win_rate"+" "+"draw_win_rate" +" "+"draw_lose_rate"+" "+"lose_rate"   +"\n")
 
     for i in list_of_america:  ## for each stock symbol in the list of america
         try: 
@@ -480,19 +498,19 @@ def document_overview_winrate(winrate_requirement:float):
 
             with open(filename, "a+") as f: ## open the file to write
                 if (a.agpd > 0.001 and a.number_of_trade >= 4 and a.agpd != 1 and float(a.list_of_ending_price[-1]) >2 and a.W_moderate_list[-1] > 0 and a.average_volume > 500000):
-                    f.write(i + "," + str(a.agpd) + "," + str(a.number_of_trade) + "," + str(a.average_day) + "," + str(a.win_rate) + "\n")
-        except IndexError:
-            print("Index Error for stock symbol:", i)
-            pass
+                    f.write(i + "," + str(a.agpd) + "," + str(a.number_of_trade) + "," + str(a.average_day) + "," + str(a.win_rate) +","+str(a.absolut_trade_winrate)+","+str(a.draw_win_winrate)+","+str(a.draw_lose_winrate)+","+str(a.lose_winrate) +"\n")
+        # except IndexError:
+        #     print("Index Error for stock symbol:", i)
+        #     pass
         except FileNotFoundError:
             print("File Not found error for stock symbol:", i)
             pass
         except ZeroDivisionError:
             print("Zero Division Error for stock symbol:", i)
             pass
-        except Exception as e:
-            print(f"An error occurred for stock symbol {i}: {e}")
-            pass
+        # except Exception as e:
+        #     print(f"An error occurred for stock symbol {i}: {e}")
+        #     pass
 
 
 def exporting_to_document():
@@ -560,10 +578,10 @@ if __name__ == "__main__":
 
 
 
-    stock_symbol = "KRYS"  # Example stock symbol
-    # trying = try_out(stock_symbol, W_buy=17, W_sell=26)  # Create an instance of the try_out class
+    stock_symbol = "XLO"  # Example stock symbol
+    trying = try_out(stock_symbol, W_buy=17, W_sell=26)  # Create an instance of the try_out class
     # Example usage of the try_out class
-    document_overview_winrate(winrate_requirement=0.5)  # Document overview with a win rate requirement
+    # document_overview_winrate(winrate_requirement=0.5)  # Document overview with a win rate requirement
     
     # exporting_to_document()  # Export the data to a document
     # print("Stock : " , stock_symbol)

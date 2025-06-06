@@ -148,6 +148,10 @@ class risk_assessment_library:
     W_sell_list_within_class = np.array([],dtype=np.float64) ## initial value for W sell list within class
     winrate = 0 ## initial value for winrate
     average_day = 0 ## initial value for average day
+    absolut_trade_winrate = 0
+    draw_win_winrate = 0
+    draw_lose_winrate = 0
+    lose_winrate = 0 
 
     def __init__(self,name,area=""):
         '''
@@ -809,6 +813,13 @@ class risk_assessment_library:
         self.W_moderate_list_within_class=np.array([]) ## initial value for W moderate list within class
         self.elasped_day_list = np.array([]) ## initial value for elasped day list
         self.W_sell_list_within_class = np.array([]) ## initial value for W sell list within class
+        self.winrate = 0 ## initial value for winrate
+        self.average_day = 0 ## initial value for average day
+        self.absolut_trade_winrate = 0
+        self.draw_win_winrate = 0
+        self.draw_lose_winrate = 0
+        self.lose_winrate = 0 
+        
 
 if __name__ == "__main__":
     ## demo program for running the thing
