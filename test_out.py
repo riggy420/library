@@ -105,8 +105,6 @@ class try_out(risk_assessment_library):
                 if self.W_sell_list[i] > W_sell:
                     self.comparing_date_sell_off = np.append(self.comparing_date_sell_off,i+self.a) ## append the indices of the date that we ought to sell off to the comparing date sell off
         
-
-
         else: ## if the past record does not exist
             
             f=open(stock_price_database,'r',encoding="utf8") ### opening the files 
@@ -224,16 +222,20 @@ class try_out(risk_assessment_library):
 
         date_purchase = len(self.comparing_date_purchase)
         date_sell_off = len(self.comparing_date_sell_off)
+        mid_way_sell_failture = False # indicator variable to prevent if more than two items exceed <3% and need to sell at the same time 
+        ### like on 28 we sell the item <3% and yet  or it is caused by other issues
 
         i =0 ## pointer value for the purchase date and prepare for any increment of the value of the date_purchase
 
         while i < date_purchase: ## loop through the comparing date purchase
             # print("Which one are we are going to execute rn: ",self.comparing_date_purchase[int(i)]) ## print the date that we are going to execute
             if int(self.comparing_date_purchase[int(i)]+1) == len(self.list_of_opening_price) or int(self.comparing_date_purchase[int(i)]-1) == past_record:
-                i+=1 ## increment the pointer value for the purchase date
+                i+=1 ## increment the  pointer value for the purchase date
+                print("Has to pause for a bit")
                 continue
             self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]) ## append the value to the list
-            # print("the date that we are going to buy is:", self.comparing_date_purchase[int(i)])
+            # print("The price that we are buying", self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)])
+            # print("After appending to the buy list", self.buy_at_ending_price)            # print("the date that we are going to buy is:", self.comparing_date_purchase[int(i)])
             past_record = int(self.comparing_date_purchase[int(i)])
             j = 0 ## pointer value for the sell off date    
             while j < date_sell_off:
@@ -249,19 +251,22 @@ class try_out(risk_assessment_library):
                             selling_date = np.append(selling_date,self.list_of_date[int(k)]) ## append the date to the selling date list => When we sell and append it to the list
                             absolute_win_trade_count += 1 ## increment the absolute win trade count
                             break
-                        elif self.list_of_minimum_price[k] <= self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95:
+                        elif self.list_of_minimum_price[k] <= self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.97:
                             # print("This drop off early: ",self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95 )
                             # print("The minimum price is: ",self.list_of_minimum_price[k])
                             # print("The comparing date purchase is: ",self.comparing_date_purchase)
 
-                            self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95)
+                            print("This drop off early: We shitted",self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.97 )
+
+                            self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.97)
                             drop_too_much = True
                             selling_date = np.append(selling_date,self.list_of_date[int(k)]) ## append the date to the selling date list => When we sell and append it to the list
                             lose_trade_count += 1 ## increment the lose trade count
                             # print("This drop off early: ",self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95)
                             ## the hot added feature 
                             ## when broke and then we re - purchase again 
-                            # print("Trigger here")
+                            print("Trigger here")
+                            print("the date that we are going to buy is: ",self.list_of_date[int(self.comparing_date_purchase[int(i)])])
 
                             # print("The k value is: ",k)
 
@@ -272,7 +277,7 @@ class try_out(risk_assessment_library):
                                 break ## if the date that we are buying date that we append is the same as the next day, then we just remove the past record and continue
                             self.comparing_date_purchase = np.insert(self.comparing_date_purchase,i+1,int(k)) ## append the value to the list
                             self.list_of_reflection = np.append(self.list_of_reflection,int(k)) ## append the value to the list # can not care for now
-                            self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95) ## append the value to the list
+                            self.buy_at_ending_price = np.insert(self.buy_at_ending_price,i+1,self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.97) ## append the value to the list
                             buying_date = np.append(buying_date,self.list_of_date[int(k)]) ## append the date to the buying date list => When we buy and append it to the list
                             # date_purchase += 1 ## update the date purchase
                             past_record = int(self.comparing_date_purchase[int(i)]) ## update the past record
@@ -342,8 +347,8 @@ class try_out(risk_assessment_library):
         #  
         ####
 
-        self.buy_at_ending_price = np.unique(self.buy_at_ending_price) ## remove the duplicate values in the list
-        self.sell_at_ending_price = np.unique(self.sell_at_ending_price) ## remove the duplicate values in the list
+        # self.buy_at_ending_price = np.unique(self.buy_at_ending_price) ## remove the duplicate values in the list
+        # self.sell_at_ending_price = np.unique(self.sell_at_ending_price) ## remove the duplicate values in the list
         print("buying price : ",self.buy_at_ending_price)
         print("selling price : ",self.sell_at_ending_price)
         print("One to one corrspondence between buying and selling date: ", len(buying_date) == len(selling_date)) ## check if the length of the buying date and selling date are the same
@@ -474,7 +479,7 @@ class try_out(risk_assessment_library):
 
 def document_overview_winrate(winrate_requirement:float):
         # Example usage of the try_out class
-    stock_price_america = r"stock_list\nasdaqlisted.txt" ## getting the reference 
+    stock_price_america = r"stock_list/nasdaqlisted.txt" ## getting the reference 
 
     filename = "generated_file/America/winrate_america_all_modified.txt" ## the fila that we are going to write on
 
@@ -486,7 +491,7 @@ def document_overview_winrate(winrate_requirement:float):
     for string in strings:  ## for each string in the strings
         list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
 
-    list_of_america= ["XLO"]
+    # list_of_america= ["XLO"]
 
     with open(filename,'a+') as f: ## prepare the file
         f.write("Stock_ID" + " " + "AGPD_value " + "Number_of_Trade"+ " "+"Average_Day" + " " + "Average_WinRate"+" "+"absolute_win_rate"+" "+"draw_win_rate" +" "+"draw_lose_rate"+" "+"lose_rate"   +"\n")
@@ -499,9 +504,9 @@ def document_overview_winrate(winrate_requirement:float):
             with open(filename, "a+") as f: ## open the file to write
                 if (a.agpd > 0.001 and a.number_of_trade >= 4 and a.agpd != 1 and float(a.list_of_ending_price[-1]) >2 and a.W_moderate_list[-1] > 0 and a.average_volume > 500000):
                     f.write(i + "," + str(a.agpd) + "," + str(a.number_of_trade) + "," + str(a.average_day) + "," + str(a.win_rate) +","+str(a.absolut_trade_winrate)+","+str(a.draw_win_winrate)+","+str(a.draw_lose_winrate)+","+str(a.lose_winrate) +"\n")
-        # except IndexError:
-        #     print("Index Error for stock symbol:", i)
-        #     pass
+        except IndexError:
+            print("Index Error for stock symbol:", i)
+            pass
         except FileNotFoundError:
             print("File Not found error for stock symbol:", i)
             pass
@@ -538,7 +543,7 @@ def exporting_to_document():
     for string in strings:  ## for each string in the strings
         list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
 
-    # list_of_america = ["KRYS"] ## just for testing purpose, we can remove this later on
+    # list_of_america = ["KRYS"] ## just for testing purpose, we can remove this later onXLO
     for i in list_of_america:
         try:
             print(i)
@@ -578,7 +583,7 @@ if __name__ == "__main__":
 
 
 
-    stock_symbol = "XLO"  # Example stock symbol
+    stock_symbol = "AADR"  # Example stock symbol
     trying = try_out(stock_symbol, W_buy=17, W_sell=26)  # Create an instance of the try_out class
     # Example usage of the try_out class
     # document_overview_winrate(winrate_requirement=0.5)  # Document overview with a win rate requirement

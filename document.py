@@ -13,7 +13,7 @@ class document():
         This function is to get the list of all the stock in America and return as a file, comprising of 
         the stock name, stock symbol, stock price, stock volume, stock market cap, stock sector, stock industry, stock country
         '''
-        stock_price_america = r"stock_list\nasdaqlisted.txt" ## getting the reference 
+        stock_price_america = r"stock_list/nasdaqlisted.txt" ## getting the reference 
         ## file from the stock list
         Path("generated_file").mkdir(parents=True, exist_ok=True) ## create the directory if it does not exist
         Path("generated_file/America").mkdir(parents=True, exist_ok=True) ## create the directory if it does not exist
