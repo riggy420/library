@@ -105,6 +105,7 @@ class try_out(risk_assessment_library):
                     self.list_of_reflection = np.append(self.list_of_reflection,i) ## append the value to the list
                 if self.W_sell_list[i] > W_sell:
                     self.comparing_date_sell_off = np.append(self.comparing_date_sell_off,i+self.a) ## append the indices of the date that we ought to sell off to the comparing date sell off
+                    # print("Sell off date: ",self.list_of_date[i+self.a]) ## print the sell off date
         
         else: ## if the past record does not exist
             
@@ -229,100 +230,265 @@ class try_out(risk_assessment_library):
         i =0 ## pointer value for the purchase date and prepare for any increment of the value of the date_purchase
         buy_in_array_pointer = 0 ## Pointer value for buy_at_the end array
 
-        while i < date_purchase: ## loop through the comparing date purchase
-            # print("Which one are we are going to execute rn: ",self.list_of_date[int(self.comparing_date_purchase[int(i)])+1]) ## print the date that we are going to execute
-            # if self.list_of_minimum_price[int(self.comparing_date_purchase[int(i)])] <= self.list_of_opening_price[int(self.comparing_date_purchase[int(i)])]*0.97: ## if the minimum price is less than the opening price*0.97
-            #     print("We need to sell of early and not passing the past record")
-            #     past_record = 0
-            ## if the next day drop more than 3% and it is following the past recorrd => we need to overwrite that 
-            # print("The past record is: ",past_record+1) ## print the past record
-            # print("The comparing date purchase is: ",self.comparing_date_purchase[int(i)]) ## print the comparing date purchase
-            if i > len(self.buy_at_ending_price):
-                buy_in_array_pointer = -1 ## if the buy in array pointer exceeds the length of the buy at ending price, then we just set it to the last element
+        # for i in range(len(self.comparing_date_purchase)):
+        #     print("buying date: ",self.list_of_date[int(self.comparing_date_purchase[i])]) ## print the buying date
+        # for i in range(len(self.comparing_date_sell_off)):
+            # print("selling date: ",self.list_of_date[int(self.comparing_date_sell_off[i])]) 
 
-            if len(self.buy_at_ending_price) == len(self.sell_at_ending_price):
-                if int(self.comparing_date_purchase[int(i)]+1) == len(self.list_of_opening_price) or int(self.comparing_date_purchase[int(i)]) == past_record+1:
-                    i+=1 ## increment the  pointer value for the purchase date
-                    # print("Has to pause for a bit")
-                    continue
+        ### Pre-calibration: So more like what if date_sell_of < date_purchase for every single element
+        ## Sound more like a bug, but it is not a bug, it is just the way that we are doing it
+        ## there is more opporunity to sell off rather than buying it and it exist before we can buy it for the first time
+        # pointer_variable = 0 ## pointer variable for the comparing date sell off
+        for b in range(len(self.comparing_date_sell_off)):
+            if self.comparing_date_sell_off[b]> self.comparing_date_purchase[0]:
+                pointer_variable = b
+                break
+                print("Pointer variable: ",pointer_variable) ## print the pointer variable
+
+        if pointer_variable > 0: ## if the pointer variable is greater than 0, then we can just set the date_sell_off to the pointer variable
+            self.comparing_date_sell_off = self.comparing_date_sell_off[pointer_variable:] ## set the comparing date sell off to the pointer variable
+        
+
+        # for k in range(10):
+        #     print("Comparing date purchase: ",self.comparing_date_purchase[k]) ## print the comparing date purchase
+        #     print("Comparing date sell off: ",self.comparing_date_sell_off[k]) ## print the comparing date sell off
+                    
+        # print("Length of the comparing date purchase: ",len(self.comparing_date_purchase)) ## print the length of the comparing date purchase
+        # print("Length of the comparing date sell off: ",len(self.comparing_date_sell_off)) ## print the length of the comparing date sell off
+
+        while i< date_purchase: ##  Looping through the possible purchase date
+            
+            lost_very_early = False
+            # if self.list_of_date[int(self.comparing_date_purchase[int(i)])] == "2022-10-17": ## if the date is 2023-10-27, then we just skip it
+            #     print("Here")
+            #     print(self.list_of_date[int(self.comparing_date_purchase[int(i)])])
+            #     print(self.comparing_date_purchase[int(i)]) ## print the comparing date purchase
+            # if lost_very_early:
+            ###  Need to check if it drops for more than 3% yesterday 
+            ###  More like the price difference between really and it violate the past record law, that is the issue
+            if self.buy_at_ending_price.size>0 and (self.list_of_minimum_price[int(self.comparing_date_purchase[(int(i))]) < self.buy_at_ending_price[buy_in_array_pointer]*0.97]): ## if the minimum price is less than the ending price*0.97
+                # print("It dropped more than expected, we need to re-purchase it and re-set the buying price")
+                self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]) ## append the value to the list
+                buying_date = np.append(buying_date,self.list_of_date[int(self.comparing_date_purchase[int(i)])+1]) ## append the date to the buying date list => When we buy and append it to the list
+                past_record = int(self.comparing_date_purchase[int(i)]) ## update the past record to the current purchase date
+                # print("Dropper")
+
+            # print("Past record: ",past_record) ## print the past record
+            # print("Comparing date purchase: ",self.comparing_date_purchase[int(i)]) ## print the comparing date purchase
+            ###  Need to check if we buy form yesterday 
+            if ((i >0) and (past_record == int(self.comparing_date_purchase[int(i)])) and (len(buying_date)==len(selling_date))): ## if the past record is the same as the current purchase date and the buying price is the same as the opening price
+                i+=1 ## increment the pointer value for the purchase date
+                # print("Passing record")
+                # print(self.list_of_date[int(self.comparing_date_purchase[int(i)])])
+                continue ## continue to the next iteration of the loop
+
+            # if self.comparing_date_purchase[int(i)]  == 583:
+            #     print("Arrived")
+
+            ### If not, we can then assume that we can select when to sell 
+            if i == 0 or len(buying_date) == len(selling_date): ## we are making a unique trade that jump out of the old cluster (or consecutive buying day)) 
+                ## append the first element, meaning that we should probably
                 self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.list_of_opening_price[int(self.comparing_date_purchase[int(i)])+1]) ## append the value to the list
-                buying_date = np.append(buying_date,self.list_of_date[int(self.comparing_date_purchase[int(i)]+1)]) ## append the date to the buying date list => When we buy and append it to the list
+                
+                ### Past record is keep tracking on the pointer/number of element in the list_of_date that we just buy
+                past_record = int(self.comparing_date_purchase[int(i)]+1) ## update the past record 
 
-                # print("The price that we are buying", self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)])
-                # print("After appending to the buy list", self.buy_at_ending_price)            # print("the date that we are going to buy is:", self.comparing_date_purchase[int(i)])
-                past_record = int(self.comparing_date_purchase[int(i)])
-            j = 0 ## pointer value for the sell off date    
+                ## keeping track of the date that we have made purhcases and stored it as list
+                buying_date = np.append(buying_date,self.list_of_date[int(self.comparing_date_purchase[int(i)])+1]) ## append the date to the buying date list => When we buy and append it to the list
+
+                # buy_in_array_pointer +=1 ## increment the pointer value for the buy in array pointer
+            # if self.comparing_date_purchase[int(i)]  == 583:
+            #     print("Arrived2")
+            # if self.list_of_date[int(self.comparing_date_purchase[int(i)])] == "2022-10-17": ## if the date is 2023-10-27, then we just skip it
+            #     print("Here")
+            #     print(self.comparing_date_purchase[int(i)]) ## print the comparing date purchase
+            if lost_very_early:
+                j = i -1
+            else:
+                j = i ## Pointer value for looping through the sell off date
+            # j=0
             while j < date_sell_off:
-                if self.comparing_date_sell_off[int(j)] - self.comparing_date_purchase[int(i)]>=0:
-                    self.actual_actual_purchase = np.append(self.actual_actual_purchase,self.comparing_date_purchase[int(i)]) ## append the value to the list
-                    sell_early = False
-                    drop_too_much = False
-                    # print("We are tracking on the price: ", self.buy_at_ending_price[buy_in_array_pointer])
-                    for k in range(int(self.comparing_date_purchase[(int(i))]+1),int(self.comparing_date_sell_off[(int(j))]+1)):
-                        if self.list_of_maximum_price[k] >= self.buy_at_ending_price[buy_in_array_pointer]*1.03: ## if the maximum price is greater than the ending price*1.03
+                ### looping through between the date between the buying date and the date that achieves 26
+                # print("Comparing date purchase: ",self.comparing_date_purchase[int(i)]) ## print the comparing date purchase
+                # print("Comparing date sell off: ",self.comparing_date_sell_off[int(j)]) ## print the comparing date sell off
+                # if j == 891:
+                #     print(self.buy_at_ending_price) ## print the buy at ending price
+                #     print(buying_date) ## print the buying date
+                #     print(selling_date) ## print the selling date
+
+                if int(self.comparing_date_sell_off[int(j)]+1) - int(self.comparing_date_purchase[int(i)]+1)>=0:
+                    # if self.comparing_date_purchase[int(i)]   == 583:
+                        # print("Finding option",self.comparing_date_sell_off[int(j)])
+                    win_early = False ## indicator variable to check if we are win early or not 
+                    drop_too_much = False ## indicator variable to check if we drop too much or not
+
+                    ### Supposing the self.comparing_date_purchase store all the pointer of the list of dates that have W_buy value < 17
+                    ### Supposing the self.comparing_date_sell_off store all the pointer of the list of dates that have W_sell value >= 26 
+                    for k in range(int(self.comparing_date_purchase[int(i)])+1,int(self.comparing_date_sell_off[int(j)])+1): 
+                        
+                        ### if one of the day exceed 3%, we mark it as sell off date
+                        if (self.list_of_maximum_price[k]> self.buy_at_ending_price[buy_in_array_pointer]*1.03): ## if the maximum price is greater than the ending price*1.03
                             self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*1.03) ## append the value to the list
-                            sell_early = True
-                            # print("The sell early: ",self.buy_at_ending_price[buy_in_array_pointer]*1.03 )
                             selling_date = np.append(selling_date,self.list_of_date[int(k)]) ## append the date to the selling date list => When we sell and append it to the list
-                            absolute_win_trade_count += 1 ## increment the absolute win trade count
-                            break
-                        elif self.list_of_minimum_price[k] <= self.buy_at_ending_price[buy_in_array_pointer]*0.97:
-                            # print("This drop off early: ",self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95 )
-                            # print("The minimum price is: ",self.list_of_minimum_price[k])
-                            # print("The comparing date purchase is: ",self.comparing_date_purchase)
+                            # print(self.list_of_date[int(k)]) ## print the date that we are selling
+                            # print("Price that we are selling", self.buy_at_ending_price[buy_in_array_pointer]*1.03) ## print the price that we are selling
+                            absolute_win_trade_count += 1 ## increment the absolute win trade count > 1.03 percentage
+                            win_early = True ## set the win early to true
+                            
+                            break ## break the loop since we have found the win early point
+                            
+                            ### if the minimum price drop too much to a certain point, we need to cut off and we re-purchase it
+                            ### If one of the day drop for more than 3%, we need to re-purhcase and re-sell it off 
+                        elif (self.list_of_minimum_price[k] <= self.buy_at_ending_price[buy_in_array_pointer]*0.97):
+                            ### for the selling price, we just need to append the newly added value there
+                            self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*0.97) 
+                            
+                            selling_date = np.append(selling_date,self.list_of_date[int(k)]) 
+                            ## append the date to the selling date list => When we sell and append it to the list
 
-                            # print("This drop off early: We shitted",self.buy_at_ending_price[buy_in_array_pointer]*0.97 )
+                            lose_trade_count += 1 ## increment the lose trade count < 0.97 percentage
 
-                            self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*0.97)
-                            drop_too_much = True
-                            selling_date = np.append(selling_date,self.list_of_date[int(k)]) ## append the date to the selling date list => When we sell and append it to the list
-                            lose_trade_count += 1 ## increment the lose trade count
-                            # print("This drop off early: ",self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95)
-                            ## the hot added feature 
-                            ## when broke and then we re - purchase again 
-                            # print("Trigger here")
-                            # print("the date that we are going to buy is: ",self.list_of_date[int(self.comparing_date_purchase[int(i)])])
+                            ## we need to buy at the same day 
+                            buying_date = np.append(buying_date,self.list_of_date[int(k)]) 
+                            ## append the date to the buying date list => When we buy and append it to the list
 
-                            # print("The k value is: ",k)
+                            self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*0.97) 
+                            ## append the value to the list
 
-                            if self.comparing_date_purchase[(int(i))]+1 == k:
-                                past_record = 0 ## reset the past record to something weird to avoid error
-                                j+=1 ## increment the pointer value for the buy in date
-                                # print("Remove past record and continue")
-                                break ## if the date that we are buying date that we append is the same as the next day, then we just remove the past record and continue
+                            # print("Rmb today is the dat that we shitted: ",self.list_of_date[int(k)]) ## print the date that we are buying
 
-                            if i+1 >= len(self.comparing_date_purchase): ## idfk trying to append if it exceeds the i+1
+                            ## if the i+1 exceeds the length of the comparing date purchase
+                            if i+1 > len(self.comparing_date_purchase): 
                                 self.comparing_date_purchase = np.append(self.comparing_date_purchase,int(k)) ## append the value to the list
                             else:
                                 self.comparing_date_purchase = np.insert(self.comparing_date_purchase,i+1,int(k)) ## append the value to the list
-                            self.list_of_reflection = np.append(self.list_of_reflection,int(k)) ## append the value to the list # can not care for now
-                            if i+1 >= len(self.buy_at_ending_price):
-                                self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*0.97)
-                            else:
-                                self.buy_at_ending_price = np.insert(self.buy_at_ending_price,i+1,self.buy_at_ending_price[buy_in_array_pointer]*0.97) ## append the value to the list
-                            
-                            # print("We are going to buy on this date",self.list_of_date[int(k)]) ## print the date that we are going to buy
-                            buying_date = np.append(buying_date,self.list_of_date[int(k)]) ## append the date to the buying date list => When we buy and append it to the list
-                            # date_purchase += 1 ## update the date purchase
-                            past_record = int(k)-1 ## update the past record
-                            # print("Updated past record to: ",self.list_of_date[int(past_record)]) ## print the past record
+                            ### No need to change the comparing_date_sell_off since it should be same day that we are selling it off if it reaches 26 
 
-                            # print("The past record is updated to: ",past_record)
-                            # print("The comparing date purchase is updated to: ",self.comparing_date_purchase)
-                            # print("The buying price is updated to: ",self.buy_at_ending_price)
-                            # print("The buying date is updated to: ",buying_date)
-                            break
+                            drop_too_much = True ## set the drop too much to true
 
-                    if not sell_early and not drop_too_much: ## if we didn't sell early / wait until W_sell >= 26
-                        self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.list_of_ending_price[int(self.comparing_date_sell_off[int(j)])])
-                        selling_date = np.append(selling_date,self.list_of_date[int(self.comparing_date_sell_off[int(j)])]) ## append the date to the selling date list => When we sell and append it to the list  
+                            lost_very_early = True
+
+                            ## Past record is updated to k 
+                            past_record = int(k) ## update the past record to the current k value
+
+                            # i-=1
+
+                            break ## break the loop since we have found the drop too much point
+                    
+                    ## if we didn't sell early / wait until W_sell >= 26
+                    if drop_too_much == False and win_early == False: 
+                        ## append the final ending price to the list
+                        self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.list_of_ending_price[int(self.comparing_date_sell_off[int(j)]+1)])
+
+                        ## record it to the selling date list
+                        selling_date = np.append(selling_date,self.list_of_date[int(self.comparing_date_sell_off[int(j)]+1)]) ## append the date to the selling date list => When we sell and append it to the list
                         draw_trade_count += 1 ## increment the draw trade count
-                        draw_trade_start_day = np.append(draw_trade_start_day,self.list_of_date[int(self.comparing_date_purchase[int(i)])]) ## append the date to the draw trade start day list                  
+                        draw_trade_start_day = np.append(draw_trade_start_day,self.list_of_date[int(self.comparing_date_purchase[int(i)]+1)]) ## append the date to the draw trade start day list
 
-                    # buying_date = np.append(buying_date,self.list_of_date[int(self.comparing_date_purchase[int(i)]+1)]) ## append the date to the buying date list => When we buy and append it to the list
-                    break
-                j+=1 ## increment the pointer value for the sell off date
-            i+=1 ## increment the pointer value for the purchase date
+                        break 
+                    elif drop_too_much or win_early:
+                        break
+
+                j+=1 ## increment the pointer variable for the sell off date
+            
+            i+=1
+            buy_in_array_pointer =-1 ## increment the pointer value for the buy in array pointer
+
+
+        # while i < date_purchase: ## loop through the comparing date purchase
+        #     # print("Which one are we are going to execute rn: ",self.list_of_date[int(self.comparing_date_purchase[int(i)])+1]) ## print the date that we are going to execute
+        #     # if self.list_of_minimum_price[int(self.comparing_date_purchase[int(i)])] <= self.list_of_opening_price[int(self.comparing_date_purchase[int(i)])]*0.97: ## if the minimum price is less than the opening price*0.97
+        #     #     print("We need to sell of early and not passing the past record")
+        #     #     past_record = 0
+        #     ## if the next day drop more than 3% and it is following the past recorrd => we need to overwrite that 
+        #     # print("The past record is: ",past_record+1) ## print the past record
+        #     # print("The comparing date purchase is: ",self.comparing_date_purchase[int(i)]) ## print the comparing date purchase
+        #     if i > len(self.buy_at_ending_price):
+        #         buy_in_array_pointer = -1 ## if the buy in array pointer exceeds the length of the buy at ending price, then we just set it to the last element
+
+        #     if len(self.buy_at_ending_price) == len(self.sell_at_ending_price):
+        #         if int(self.comparing_date_purchase[int(i)]+1) == len(self.list_of_opening_price) or int(self.comparing_date_purchase[int(i)]) == past_record+1:
+        #             i+=1 ## increment the  pointer value for the purchase date
+        #             # print("Has to pause for a bit")
+        #             continue
+        #         self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.list_of_opening_price[int(self.comparing_date_purchase[int(i)])+1]) ## append the value to the list
+        #         buying_date = np.append(buying_date,self.list_of_date[int(self.comparing_date_purchase[int(i)]+1)]) ## append the date to the buying date list => When we buy and append it to the list
+
+        #         # print("The price that we are buying", self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)])
+        #         # print("After appending to the buy list", self.buy_at_ending_price)            # print("the date that we are going to buy is:", self.comparing_date_purchase[int(i)])
+        #         past_record = int(self.comparing_date_purchase[int(i)])
+        #     j = 0 ## pointer value for the sell off date    
+        #     while j < date_sell_off:
+        #         if self.comparing_date_sell_off[int(j)] - self.comparing_date_purchase[int(i)]>=0:
+        #             self.actual_actual_purchase = np.append(self.actual_actual_purchase,self.comparing_date_purchase[int(i)]) ## append the value to the list
+        #             sell_early = False
+        #             drop_too_much = False
+        #             # print("We are tracking on the price: ", self.buy_at_ending_price[buy_in_array_pointer])
+        #             for k in range(int(self.comparing_date_purchase[(int(i))]+1),int(self.comparing_date_sell_off[(int(j))]+1)):
+        #                 if self.list_of_maximum_price[k] >= self.buy_at_ending_price[buy_in_array_pointer]*1.03: ## if the maximum price is greater than the ending price*1.03
+        #                     self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*1.03) ## append the value to the list
+        #                     sell_early = True
+        #                     # print("The sell early: ",self.buy_at_ending_price[buy_in_array_pointer]*1.03 )
+        #                     selling_date = np.append(selling_date,self.list_of_date[int(k)]) ## append the date to the selling date list => When we sell and append it to the list
+        #                     absolute_win_trade_count += 1 ## increment the absolute win trade count
+        #                     break
+        #                 elif self.list_of_minimum_price[k] <= self.buy_at_ending_price[buy_in_array_pointer]*0.97:
+        #                     # print("This drop off early: ",self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95 )
+        #                     # print("The minimum price is: ",self.list_of_minimum_price[k])
+        #                     # print("The comparing date purchase is: ",self.comparing_date_purchase)
+
+        #                     # print("This drop off early: We shitted",self.buy_at_ending_price[buy_in_array_pointer]*0.97 )
+
+        #                     self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*0.97)
+        #                     drop_too_much = True
+        #                     selling_date = np.append(selling_date,self.list_of_date[int(k)]) ## append the date to the selling date list => When we sell and append it to the list
+        #                     lose_trade_count += 1 ## increment the lose trade count
+        #                     # print("This drop off early: ",self.list_of_opening_price[int(self.comparing_date_purchase[int(i)]+1)]*0.95)
+        #                     ## the hot added feature 
+        #                     ## when broke and then we re - purchase again 
+        #                     # print("Trigger here")
+        #                     # print("the date that we are going to buy is: ",self.list_of_date[int(self.comparing_date_purchase[int(i)])])
+
+        #                     # print("The k value is: ",k)
+
+        #                     if self.comparing_date_purchase[(int(i))]+1 == k:
+        #                         past_record = 0 ## reset the past record to something weird to avoid error
+        #                         j+=1 ## increment the pointer value for the buy in date
+        #                         # print("Remove past record and continue")
+        #                         break ## if the date that we are buying date that we append is the same as the next day, then we just remove the past record and continue
+
+        #                     if i+1 >= len(self.comparing_date_purchase): ## idfk trying to append if it exceeds the i+1
+        #                         self.comparing_date_purchase = np.append(self.comparing_date_purchase,int(k)) ## append the value to the list
+        #                     else:
+        #                         self.comparing_date_purchase = np.insert(self.comparing_date_purchase,i+1,int(k)) ## append the value to the list
+        #                     self.list_of_reflection = np.append(self.list_of_reflection,int(k)) ## append the value to the list # can not care for now
+        #                     if i+1 >= len(self.buy_at_ending_price):
+        #                         self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*0.97)
+        #                     else:
+        #                         self.buy_at_ending_price = np.insert(self.buy_at_ending_price,i+1,self.buy_at_ending_price[buy_in_array_pointer]*0.97) ## append the value to the list
+                            
+        #                     # print("We are going to buy on this date",self.list_of_date[int(k)]) ## print the date that we are going to buy
+        #                     buying_date = np.append(buying_date,self.list_of_date[int(k)]) ## append the date to the buying date list => When we buy and append it to the list
+        #                     # date_purchase += 1 ## update the date purchase
+        #                     past_record = int(k)-1 ## update the past record
+        #                     # print("Updated past record to: ",self.list_of_date[int(past_record)]) ## print the past record
+
+        #                     # print("The past record is updated to: ",past_record)
+        #                     # print("The comparing date purchase is updated to: ",self.comparing_date_purchase)
+        #                     # print("The buying price is updated to: ",self.buy_at_ending_price)
+        #                     # print("The buying date is updated to: ",buying_date)
+        #                     break
+
+        #             if not sell_early and not drop_too_much: ## if we didn't sell early / wait until W_sell >= 26
+        #                 self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.list_of_ending_price[int(self.comparing_date_sell_off[int(j)])])
+        #                 selling_date = np.append(selling_date,self.list_of_date[int(self.comparing_date_sell_off[int(j)])]) ## append the date to the selling date list => When we sell and append it to the list  
+        #                 draw_trade_count += 1 ## increment the draw trade count
+        #                 draw_trade_start_day = np.append(draw_trade_start_day,self.list_of_date[int(self.comparing_date_purchase[int(i)])]) ## append the date to the draw trade start day list                  
+
+        #             # buying_date = np.append(buying_date,self.list_of_date[int(self.comparing_date_purchase[int(i)]+1)]) ## append the date to the buying date list => When we buy and append it to the list
+        #             break
+        #         j+=1 ## increment the pointer value for the sell off date
+        #     i+=1 ## increment the pointer value for the purchase date
 
         # print("sell at ending price: ", self.sell_at_ending_price)
         # print("selling date: ", selling_date)
@@ -379,6 +545,9 @@ class try_out(risk_assessment_library):
         # print("One to one corrspondence between buying and selling date: ", len(buying_date) == len(selling_date)) ## check if the length of the buying date and selling date are the same
         # for i in range(len(buying_date)):
             # print("buying date : ",buying_date[i]) ## print the buying date
+
+        # for i in range(len(selling_date)):
+            # print("selling date : ",selling_date[i])
 
         # self.buy_at_ending_price,self.sell_at_ending_price= self.removing_stuff_from_the_list(self.buy_at_ending_price,self.sell_at_ending_price) ## remove the duplicate values in the list
         # result_list_for_selling_dates,indices,unique_indices_for_buying_list = self.remove_duplicate_with_indices(buying_date,selling_date) ## remove the duplicate values in the list
@@ -612,9 +781,9 @@ if __name__ == "__main__":
 
 
     stock_symbol = "AAME"  # Example stock symbol
-    # trying = try_out(stock_symbol, W_buy=17, W_sell=26)  # Create an instance of the try_out class
+    trying = try_out(stock_symbol, W_buy=17, W_sell=26)  # Create an instance of the try_out class
     # Example usage of the try_out class
-    document_overview_winrate(winrate_requirement=0.5)  # Document overview with a win rate requirement
+    # document_overview_winrate(winrate_requirement=0.5)  # Document overview with a win rate requirement
     
     # exporting_to_document()  # Export the data to a document
     # print("Stock : " , stock_symbol)
