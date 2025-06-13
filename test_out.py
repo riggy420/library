@@ -1,5 +1,6 @@
 from numpy import doc
 from psutil.tests import kernel_version
+from control_experiment import risk_assessment
 from risk_assessment_library import risk_assessment_library
 from hmac import new
 import math
@@ -30,7 +31,7 @@ import urllib
 from pathlib import Path
 
 class try_out(risk_assessment_library):
-    def __init__(self, stock_symbol,area="",W_buy=17, W_sell=26):
+    def __init__(self, stock_symbol,area="",W_buy=17, W_sell=26,target_rate = 0.03, losing_rate = 0.03):
         '''
         This is the initialisation of risk_assessment_library
         
@@ -57,6 +58,8 @@ class try_out(risk_assessment_library):
         self.stock_symbol = stock_symbol ## identifier for the stock symbol
         self.W_buy = W_buy ## the W_buy value
         self.W_sell = W_sell ## the W_sell value
+        self.target_rate = target_rate ## the target rate for the stock
+        self.losing_rate = losing_rate ## the losing rate for the stock
         if area == "industry" : ## if you are doing the overivew of the industry => Probably go here
             self.area = "industry" ## remove the area tag 
             stock_price_database = "/home/ricky/Documents/china_stock_industry_catego/{}.xlsx".format(self.name)
@@ -186,7 +189,7 @@ class try_out(risk_assessment_library):
 
         return W_moderate_list,W_sell_list ## return the entire list
 
-    def income(self):
+    def income(self,target_rate = 0.03, losing_rate = 0.03):
         '''
         This is the function that we use to calculate the income
 
@@ -235,6 +238,7 @@ class try_out(risk_assessment_library):
         # for i in range(len(self.comparing_date_sell_off)):
             # print("selling date: ",self.list_of_date[int(self.comparing_date_sell_off[i])]) 
 
+        pointer_variable = 0 ## pointer variable for the comparing date sell off
         ### Pre-calibration: So more like what if date_sell_of < date_purchase for every single element
         ## Sound more like a bug, but it is not a bug, it is just the way that we are doing it
         ## there is more opporunity to sell off rather than buying it and it exist before we can buy it for the first time
@@ -266,7 +270,7 @@ class try_out(risk_assessment_library):
             # if lost_very_early:
             ###  Need to check if it drops for more than 3% yesterday 
             ###  More like the price difference between really and it violate the past record law, that is the issue
-            if self.buy_at_ending_price.size>0 and (self.list_of_minimum_price[int(self.comparing_date_purchase[(int(i))]) < self.buy_at_ending_price[buy_in_array_pointer]*0.97]): ## if the minimum price is less than the ending price*0.97
+            if self.buy_at_ending_price.size>0 and (self.list_of_minimum_price[int(self.comparing_date_purchase[(int(i))]) < self.buy_at_ending_price[buy_in_array_pointer]*(1-losing_rate)]): ## if the minimum price is less than the ending price*0.97
                 # print("It dropped more than expected, we need to re-purchase it and re-set the buying price")
                 self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]) ## append the value to the list
                 buying_date = np.append(buying_date,self.list_of_date[int(self.comparing_date_purchase[int(i)])+1]) ## append the date to the buying date list => When we buy and append it to the list
@@ -327,8 +331,8 @@ class try_out(risk_assessment_library):
                     for k in range(int(self.comparing_date_purchase[int(i)])+1,int(self.comparing_date_sell_off[int(j)])+1): 
                         
                         ### if one of the day exceed 3%, we mark it as sell off date
-                        if (self.list_of_maximum_price[k]> self.buy_at_ending_price[buy_in_array_pointer]*1.03): ## if the maximum price is greater than the ending price*1.03
-                            self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*1.03) ## append the value to the list
+                        if (self.list_of_maximum_price[k]> self.buy_at_ending_price[buy_in_array_pointer]*(1+target_rate)): ## if the maximum price is greater than the ending price*1.03
+                            self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*(1+target_rate)) ## append the value to the list
                             selling_date = np.append(selling_date,self.list_of_date[int(k)]) ## append the date to the selling date list => When we sell and append it to the list
                             # print(self.list_of_date[int(k)]) ## print the date that we are selling
                             # print("Price that we are selling", self.buy_at_ending_price[buy_in_array_pointer]*1.03) ## print the price that we are selling
@@ -339,9 +343,9 @@ class try_out(risk_assessment_library):
                             
                             ### if the minimum price drop too much to a certain point, we need to cut off and we re-purchase it
                             ### If one of the day drop for more than 3%, we need to re-purhcase and re-sell it off 
-                        elif (self.list_of_minimum_price[k] <= self.buy_at_ending_price[buy_in_array_pointer]*0.97):
+                        elif (self.list_of_minimum_price[k] <= self.buy_at_ending_price[buy_in_array_pointer]*(1-losing_rate)):
                             ### for the selling price, we just need to append the newly added value there
-                            self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*0.97) 
+                            self.sell_at_ending_price = np.append(self.sell_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*(1-losing_rate)) 
                             
                             selling_date = np.append(selling_date,self.list_of_date[int(k)]) 
                             ## append the date to the selling date list => When we sell and append it to the list
@@ -352,7 +356,7 @@ class try_out(risk_assessment_library):
                             buying_date = np.append(buying_date,self.list_of_date[int(k)]) 
                             ## append the date to the buying date list => When we buy and append it to the list
 
-                            self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*0.97) 
+                            self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]*(1-losing_rate)) ## append the value to the list
                             ## append the value to the list
 
                             # print("Rmb today is the dat that we shitted: ",self.list_of_date[int(k)]) ## print the date that we are buying
@@ -622,21 +626,25 @@ class try_out(risk_assessment_library):
         else:
             ag = self.total_revenue_value/self.total_cost_value ## calculate the ag value
 
-        print("ag : ",ag)   
+        # print("ag : ",ag)   
         if (len(self.elasped_day) == 0):
             agpd = -10
         else:
             agpd = self.total_elasped_day/len(self.elasped_day) ## calculate the agpd value
         agpd = ag/agpd
-        print("agpd : ",agpd)
+        # print("agpd : ",agpd)
         revenue_per_year = (agpd+1)**(261)
-        print("revenue per year : ",revenue_per_year)
-        print("average day : ",average_day)
+        # print("revenue per year : ",revenue_per_year)
+        # print("average day : ",average_day)
         self.win_rate = win_trade/trade_count if trade_count > 0 else 0
-        print("win rate : ",self.win_rate)
-        print("Number of trades : ",len(self.elasped_day))
+        absolute_win_trade_rate = absolute_win_trade_count/trade_count if trade_count > 0 else 0
+        draw_win_trade_rate = draw_win_trade_count/trade_count if trade_count > 0 else 0
+        draw_lose_trade_rate = draw_lost_trade_count/trade_count if trade_count > 0 else 0
+        lose_trade_rate = lose_trade_count/trade_count if trade_count > 0 else 0
+        # print("win rate : ",self.win_rate)
+        # print("Number of trades : ",len(self.elasped_day))
         self.average_day = average_day
-        return ag,agpd,len(self.elasped_day),average_day,day_std_deviation,revenue_per_year,absolute_win_trade_count/trade_count,draw_win_trade_count/trade_count,draw_lost_trade_count/trade_count,lose_trade_count/trade_count
+        return ag,agpd,len(self.elasped_day),average_day,day_std_deviation,revenue_per_year,absolute_win_trade_rate,draw_win_trade_rate,draw_lose_trade_rate,lose_trade_rate
     
     def getting_the_list_from_the_file(self,filename):
         '''
@@ -773,18 +781,152 @@ def exporting_to_document():
             print(e)
             pass
 
+class trainer(try_out):
+    '''
+    This is the trainer class that we use to train the model
+    '''
 
+    def __init__(self, stock_symbol, W_buy_list: list, W_sell_list: list, target_rate_list: list, losing_rate_list: list):
+        self.close() ### clearing the file first => Idk why can have error if you are spamming it for too long time
+        self.name = stock_symbol ## the name of the stock symbol
+        self.stock_symbol = stock_symbol ## the stock symbol
+        self.area = "america" ## the area of the stock symbol	
+        past_record = "generated_file/America/stock_data/{}.txt".format(self.name) ## the past record of the data
+        if os.path.exists(past_record): ## if the past record exists
+            self.getting_the_list_from_the_file(past_record) ## get the list from the file
+        else:
+            print("The file does not exist, please run the try_out function first") ## if the file does not exist, then we just print the message
+            exit()
+
+        ## storing the result 
+
+        self.result_revenue_list = np.array([]) ## the result list
+        self.result_winrate_list = np.array([]) ## the result winrate list
+        self.result_number_of_trade_list = np.array([]) ## the result number of trade list
+
+        for i in range(len(W_buy_list)):
+            for j in range(len(W_sell_list)):
+                for k in range(len(target_rate_list)):
+                    for l in range(len(losing_rate_list)):
+                        
+                        for m in range(len(self.list_of_ending_price)-self.a):
+                            if self.W_moderate_list[m] < W_buy_list[i]: ## if the W_moderate is less than W_buy
+                                self.comparing_date_purchase = np.append(self.comparing_date_purchase,m+self.a) ## append the indices of the purchase date in the list of_date to comparing date purchase
+                                self.list_of_reflection = np.append(self.list_of_reflection,m) ## append the value to the list
+                            if self.W_sell_list[m] > W_sell_list[j]: ## if the W_sell is greater than W_sell
+                                self.comparing_date_sell_off = np.append(self.comparing_date_sell_off,m+self.a) ## append the indices of the date that we ought to sell off to the comparing date sell off
+                                # print("Sell off date: ",self.list_of_date[i+self.a]) ## print the sell off date
+                    
+                        # print(f"Testing W_buy: {W_buy_list[i]}, W_sell: {W_sell_list[j]}, target_rate: {target_rate_list[k]}, losing_rate: {losing_rate_list[l]}")
+                        self.ag, self.agpd,self.number_of_trade,self.average_day, self.day_std_deviation,self.revenue_per_year,self.absolut_trade_winrate,self.draw_win_winrate,self.draw_lose_winrate,self.lose_winrate = self.income(target_rate_list[k],losing_rate_list[l]) ## doing the final analysis and testing it through the past data by adding the virtual money and see
+                        self.average_volume = np.mean(self.list_of_volume_of_exchange)*self.list_of_ending_price[-1]  ## calucating the average of all
+                        self.result_revenue_list = np.append(self.result_revenue_list, self.revenue_per_year) ## append the revenue to the list
+                        self.result_winrate_list = np.append(self.result_winrate_list, self.win_rate) ## append the winrate to the list
+                        self.result_number_of_trade_list = np.append(self.result_number_of_trade_list, self.number_of_trade) ## append the number of trade to the list
+                        self.income_reset() ## reset the income variables
+                        # print(f"Results for {self.stock_symbol} with W_buy: {round(W_buy_list[i],2)}, W_sell: {round(W_sell_list[j],2)}, target_rate: {round(target_rate_list[k],4)}, losing_rate: {round(losing_rate_list[l],4)} - AG: {round(self.ag,4)}, AGPD: {round(self.agpd,4)}, Number of Trades: {round(self.number_of_trade,2)}, Average Day: {round(self.average_day,4)}, Day Std Deviation: {round(self.day_std_deviation,4)}, Revenue per Year: {self.revenue_per_year}, Absolute Win Rate: {round(self.absolut_trade_winrate,4)}, Draw Win Rate: {round(self.draw_win_winrate,4)}, Draw Lose Rate: {round(self.draw_lose_winrate,4)}, Lose Rate: {round(self.lose_winrate,4)}")
+        
+        self.result_revenue_list = np.reshape(self.result_revenue_list, (len(W_buy_list), len(W_sell_list), len(target_rate_list), len(losing_rate_list))) ## reshape the result revenue list    
+        self.result_winrate_list = np.reshape(self.result_winrate_list, (len(W_buy_list), len(W_sell_list), len(target_rate_list), len(losing_rate_list))) ## reshape the result winrate list
+        self.result_number_of_trade_list = np.reshape(self.result_number_of_trade_list, (len(W_buy_list), len(W_sell_list), len(target_rate_list), len(losing_rate_list))) ## reshape the result number of trade list
+        print("Training completed for stock symbol:", self.stock_symbol) ## print the training completed message
+        # print("Best options found in terms of winrate:", max(self.result_winrate_list)) ## print the best options found in terms of winrate
+        # print(f"And it is using the parameters of {np.argwhere(self.result_revenue_list,max(self.result_winrate_list))}")
+        # print("Best options found in terms of revenue:", max(self.result_revenue_list)) ## print the best options found in terms of revenue
+
+        # print("Best options found in terms of number of trades:", max(self.result_number_of_trade_list)) ## print the best options found in terms of number of trades
+
+    def return_outcome(self) -> tuple:
+        return self.result_revenue_list, self.result_winrate_list, self.result_number_of_trade_list
+    
+    def income_reset(self):
+        '''
+        This is the function that we use to reset the variable that is assoicated income
+
+        -----------
+        Parameters(Inputs):
+        -----------
+        * self: Just pass in the object
+
+        -----------
+        Returns:
+        -----------
+        None
+        '''
+
+        self.comparing_date_purchase = np.array([]) ## the comparing date purchase
+        self.comparing_date_sell_off = np.array([])
+        self.buy_at_ending_price = np.array([]) ## the buy at ending price
+        self.sell_at_ending_price = np.array([])
+        self.number_of_trade = 0 ## the number of trade 
+        self.elasped_day = np.array([]) ## the elasped day
+        self.total_elasped_day = 0
+def overview():
+    '''
+    This is the function where we are trying to get the overview of which W_buy or W_sell value is the best for current situation
+
+    '''
+
+    ### Getting the symbol of all stock symbol in America 
+
+    stock_price_america = r"stock_list/nasdaqlisted.txt" ## getting the reference
+    list_of_america = [] ## the list of all the stock symbol in America
+    f= open(stock_price_america,"r",encoding="utf8") ## open the file
+    strings = f.read().split("\n") ## read the file and split by new line
+    strings = strings[1:-1]    ## remove the first and the last element
+    for string in strings:  ## for each string in the strings
+        list_of_america.append(string.split("|",1)[0])
+    # list_of_america = ["KRYS"] ## just for testing purpose, we can remove this later on
+
+    ## Collecting results
+    total_revenue = np.array([]) ## the total revenue
+    total_cost = np.array([]) ## the total cost
+    total_winrate = np.array([]) ## the total winrate
+    total_ag = np.array([]) ## the total ag
+    total_agpd = np.array([]) ## the total agpd
+    total_number_of_trade = np.array([]) ## the total number of trade
+    total_average_day = np.array([]) ## the total average day
+    total_day_std_deviation = np.array([]) ## the total day standard deviation
+
+    ## Testing variable
+    W_buy_list = np.arange(15,19,0.2) ## the list of W_buy value  20
+    W_sell_list = np.arange(25,30,0.2) ## the list of W_sell value 25
+    target_rate_list = np.arange(0.02,0.05,0.002) ## the list of target rate value 15 
+    losing_rate_list = np.arange(0.02,0.05,0.002) ## the list of losing rate value 15
+
+    for i in list_of_america:  ## for each stock symbol in the list of america
+        try:
+            print(i)
+
+            ## within_stock_wise_list 
+
+        except:
+            print("Error for stock symbol:", i)
+            pass
 
 
 if __name__ == "__main__":
-
-
-
-    stock_symbol = "AAME"  # Example stock symbol
-    trying = try_out(stock_symbol, W_buy=17, W_sell=26)  # Create an instance of the try_out class
+    import time as timer
+    timer1 = timer.time_ns()  # Start the timer
+    trainer("AADR",
+            W_buy_list=np.arange(15, 20, 0.2).tolist(),
+            W_sell_list=np.arange(25, 30, 0.2).tolist(),
+            target_rate_list=np.arange(0.03, 0.05, 0.002).tolist(),
+            losing_rate_list=np.arange(0.03, 0.05, 0.002).tolist()
+        )
+    
+    timer2 = timer.time_ns()  # End the timer
+    print(f"Time taken for the operation: {(timer2 - timer1) / 1e9} seconds")  # Print the time taken for the operation
+    
+    
+    # time1 = time.time_ns()
+    
+    # stock_symbol = "AADR"  # Example stock symbol
+    # trying = try_out(stock_symbol, W_buy=17, W_sell=29,target_rate=0.04,losing_rate=0.042)  # Create an instance of the try_out class
     # Example usage of the try_out class
     # document_overview_winrate(winrate_requirement=0.5)  # Document overview with a win rate requirement
-    
+    # time2 = time.time_ns()
+    # print("Time taken for the operation: ", (time2 - time1) / 1e9, "seconds")  # Print the time taken for the operation
     # exporting_to_document()  # Export the data to a document
     # print("Stock : " , stock_symbol)
     # try_out_instance = try_out(stock_symbol,W_buy =17,W_sell=26)

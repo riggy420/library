@@ -824,8 +824,11 @@ class risk_assessment_library:
 if __name__ == "__main__":
     ## demo program for running the thing
     time1 = time.time_ns() ##recording the time
-    a = risk_assessment_library("PLL") ## running the object and get the object
+    a = risk_assessment_library("CPRT") ## running the object and get the object
     print(a.number_of_trade)
+    # print(a.d_list)
+    for i in range(len(a.rsi_list)):
+        print(a.rsi_list[i])
     # a.close()
     time2 = time.time_ns() ## marking the running time
     # print("Time taken : ",time2-time1)
