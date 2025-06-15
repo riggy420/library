@@ -292,12 +292,15 @@ class risk_assessment_library:
 
             if (self.list_of_ending_price[i+self.x-13] > self.list_of_ending_price[i+self.x-14]):
                 typical_price = (max_value+min_value+self.list_of_ending_price[i+self.x-13])/3
+                # print("typical price : ",typical_price)
                 raw_money = typical_price*self.list_of_volume_of_exchange[i+self.x-13]
                 money_positve_flow = np.append(money_positve_flow,raw_money)
+                # print("money positive flow : ",money_positve_flow)
             else:
                 typical_price = (max_value+min_value+self.list_of_ending_price[i+self.x-13])/3
                 raw_money = typical_price*self.list_of_volume_of_exchange[i+self.x-13]
                 money_negative_flow = np.append(money_negative_flow,raw_money)
+                # print("money negative flow : ",money_negative_flow)
 
         total_postive_flow = np.sum(money_positve_flow)
         total_negative_flow = np.sum(money_negative_flow)
@@ -306,6 +309,7 @@ class risk_assessment_library:
             mfr = 1000000000000
         else:
             mfr = total_postive_flow/total_negative_flow
+            # print(mfr)
 
         MFI_value = 100*(1-1/(1+mfr))
         return MFI_value
@@ -826,9 +830,13 @@ if __name__ == "__main__":
     time1 = time.time_ns() ##recording the time
     a = risk_assessment_library("CPRT") ## running the object and get the object
     print(a.number_of_trade)
+    print(a.W_moderate_list_within_class[-1]) ## printing the W moderate list within class
     # print(a.d_list)
-    for i in range(len(a.rsi_list)):
-        print(a.rsi_list[i])
+    # for i in range(10):
+    #     print("rsi",a.rsi_list[i])
+        
+    #     print("d_value,",a.list_of_d_value[i])
+    #     print("MFI:",a.MFI_list[i])
     # a.close()
     time2 = time.time_ns() ## marking the running time
     # print("Time taken : ",time2-time1)

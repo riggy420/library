@@ -338,6 +338,14 @@ def main():
 
 if __name__ == "__main__":
     import sys
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Stock Scrapper')
+    parser.add_argument('area', type=str, help='The area to scrape (e.g., America, China)')
+    parser.add_argument('stock_code', type=str, nargs='?', help='The stock code to scrape (optional)')
+
+    args = parser.parse_args()
+
     if len(sys.argv) == 2:
         s = scrapper(sys.argv[1])
     else:
