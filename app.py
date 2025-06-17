@@ -173,7 +173,7 @@ def data():
 ## front page
 @app.route('/', methods=['POST', 'GET'])
 def index():
-    data = pd.ExcelFile("W:\Trading\stock_board_industry_name_em.xlsx").parse()
+    data = pd.ExcelFile("stock_list/stock_industry_list.xlsx").parse()
     industry=data['板块名称']
     industry.loc[0]='None'
 
@@ -224,7 +224,7 @@ def result():
                 db.drop_all()
                 db.create_all()
                 try:
-                    making_data("generated_file/america/agpd_america_{}_all_0.001.txt".format(current_datetime))
+                    making_data("generated_file/America/agpd_america_{}_all_0.001.txt".format(current_datetime))
                 except FileNotFoundError:
                     print("Struck")
                     subprocess.run(["python", os.path.expanduser("W:\Trading\website-main\website-main\checking_for_america.py")])
