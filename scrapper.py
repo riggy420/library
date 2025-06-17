@@ -1,4 +1,5 @@
 from os import write
+from numpy import full
 from pandas_datareader import data as pdr
 import pandas as pd
 import csv
@@ -169,9 +170,12 @@ class scrapper():
     list_for_america = []
     area = ""
 
-    def __init__(self,area,spectific_id=None):
+    def __init__(self,area,spectific_id=None,full_scale= False):
         self.area = area
         self.spectific_id=spectific_id
+        if full_scale:
+            print("Full scale scrapping")
+            self.America(full_scale=True)
         if spectific_id is not None:
             print("Specific ID provided: " + spectific_id)
             self.scrap_specific_id_from_list([spectific_id], area)
@@ -191,7 +195,7 @@ class scrapper():
     def scrap_specific_id_from_list(self, index_list, area):
         self.write_to_file(index_list, area)
     
-    def write_to_file(self,index_list,area):
+    def write_to_file(self,index_list,area,full_scale=False):
         for indexes in index_list:
             try:
                 print("Now working on "+indexes)
@@ -202,7 +206,7 @@ class scrapper():
                 if Path(filename).exists():
                     print("Checking the last updated date")
                     last_updated_date = pd.read_csv(filename, header=None, quoting=csv.QUOTE_NONNUMERIC).iloc[-1, 0]
-                    
+                    current_dataframe = pd.read_csv(filename, header=None, quoting=csv.QUOTE_NONNUMERIC,names=['Date','Close','High','Low','Open','Volume'],on_bad_lines='skip')
                     last_updated_date = pd.to_datetime(last_updated_date.split(" ")[0], format='%Y-%m-%d')
                     if last_updated_date.strftime('%Y-%m-%d') == current_datetime.strftime("%Y-%m-%d"):
                         print("Already updated")
@@ -211,27 +215,34 @@ class scrapper():
                         print((current_datetime-last_updated_date).days)
                         df = pd.DataFrame()
 
-                        match ((current_datetime-last_updated_date).days) :
-                            case 0|1:
-                                print("Already updated and should be ready to use")
-                                continue
-                            case 2:
-                                if current_datetime.hour < 20 and (current_datetime-last_updated_date).days == 1:
-                                    continue
+                        days_difference = (current_datetime - last_updated_date).days
+                        if full_scale:
+                            days_difference = 9999  # Force refresh for full scale
+
+                        match (days_difference) :
+                            # case 0|1:
+                            #     print("Already updated and should be ready to use")
+                            #     continue
+                            case 0|1|2:
+                                # if current_datetime.hour < 20 and (current_datetime-last_updated_date).days == 1:
+                                #     continue
 
                                 ticker = yf.Ticker(indexes, session=session)
                                 df = ticker.history(period='1d', auto_adjust=True)
+                                # print(df)
                                 print("Updated for 1 day")
                             case 3|4|5:
                                 ticker = yf.Ticker(indexes, session=session)
 
                                 df = ticker.history(period='5d', auto_adjust=True)
+                                # df = pd.concat([current_dataframe, df]).drop_duplicates(inplace=True).reset_index(drop=True)
+
                                 print("Updated for 5 days")
                             case _:
                                 print("Refreshing for 5 years")
                                 ticker = yf.Ticker(indexes, session=session)
                                 refreshing = True
-                                df = ticker.history(period='5y', auto_adjust=True)
+                                # df = ticker.history(period='5y', auto_adjust=True)
 
                 
                 
@@ -258,6 +269,31 @@ class scrapper():
                 print(f"Request failed: {e}")
             except Exception as e:
                 print(f"An error occurred: {e}")
+                ## I am thinking about resetting the data in this case
+                print("Resetting the data")
+                ticker = yf.Ticker(indexes, session=session)
+                df = ticker.history(period='5y', auto_adjust=True)
+                if df.empty:
+                    print("Something is wrong with the data")
+                    print("Skipping this index")
+                else:
+                    print(indexes+" finished downloading after reset")
+                
+                df=df.drop(['Dividends'],axis = 1)
+                df=df.drop(['Stock Splits'],axis = 1)
+                # print(df)
+                ## Converting it to the format
+                df = df[['Close','High','Low','Open','Volume']]
+                # print(df)
+                for i in df.index:
+                    for j in df:
+                        df.loc[i,j] = round(float(df.loc[i,j]),2)
+                
+                # print(df)
+                df = df.astype(str)
+                filename = 'stock_data/'+str(area)+"/"+indexes+'.txt'
+                df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,mode="w")
+
                 continue
             else:
 
@@ -270,7 +306,11 @@ class scrapper():
                     for i in df.index:
                         for j in df:
                             df.loc[i,j] = round(float(df.loc[i,j]),2)
-                    
+                    # print(df)
+                    current_dataframe.drop_duplicates(subset='Date',inplace=True, ignore_index=True)
+                    # current_dataframe['Date'] = pd.to_datetime(current_dataframe['Date'])
+                    df= pd.concat([current_dataframe, df],ignore_index=True).drop_duplicates(inplace=False).reset_index(drop=True)
+                    df.dropna(inplace=True)
                     # print(df)
                     df = df.astype(str)
 
@@ -278,9 +318,9 @@ class scrapper():
                     if Path(filename).exists() == False or refreshing:
                         Path("stock_data").mkdir(parents=True, exist_ok=True)
                         Path("stock_data/"+str(area)).mkdir(parents=True, exist_ok=True)
-                        df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC)
+                        df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,index=False)
                     else:
-                        df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,mode="a")
+                        df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,mode="w",index=False)
 
                     # time.sleep(1)  # Sleep for 1 second to avoid hitting the rate limit
                 else:
@@ -288,7 +328,7 @@ class scrapper():
             finally:
                 print("Loading Next Data")
 
-    def America(self):
+    def America(self,full_scale=False):
         f=open(self.stock_price_america,'r',encoding="utf8")
         strings = f.read().split("\n")
         strings=strings[1:-1]
@@ -298,8 +338,11 @@ class scrapper():
             # print(string)
             self.list_for_america.append(string)     
 
-        # self.list_for_america = ["BCAB","BCAN","BCAL"]       
-        self.write_to_file(self.list_for_america,"America")
+        # self.list_for_america = ["BCAB","BCAN","BCAL"]  
+        if full_scale:
+            self.write_to_file(self.list_for_america,"America",True)
+        else:
+            self.write_to_file(self.list_for_america,"America")
 
     def shenzhen(self):
         f=open(self.stock_price_shenzhen,'r',encoding="utf8")
@@ -338,6 +381,7 @@ def main():
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) == 2:
         s = scrapper(sys.argv[1])
     else:
