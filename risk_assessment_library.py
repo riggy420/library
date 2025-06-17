@@ -209,19 +209,27 @@ class risk_assessment_library:
             if truth_last_day.strftime("%Y-%m-%d") != last_date :
                 ## need to update
                 print("The past record is not up to date, need to update the data and use the scrapper and should be able to call for the indivudal one")
-
+                ## Just cat the pandas dataframe la 
                 ## findig the index of the last date in the list of date
                 index_of_last_date = np.where(self.list_of_date == last_date)[0][0] ## finding the index of the last date in the list of date
                 ## getting the last date in the orginal database
                 table_of_database = pd.read_table(stock_price_database,sep=",",lineterminator="\n",names=['Date','Close','High','Low','Open','Volume']) ## getting the last date in the orginal database
                 ## finding the index of the so called last date in the current database 
                 # print(table_of_database['Date'][:10])
-                # print("First row:",table_of_database.iloc[0,0][:10])
-                # print(table_of_database.iloc[0,0])
-                # print(table_of_database.iloc[0][:10])
-                print("the data that we are in:", np.where(table_of_database['Date']==last_date)) ## finding the index of the last date in the list of date
-                # print("Last date in the orginal database: ", table_of_database)
-                print("index_difference:", len(self.list_of_date)-index_of_last_date-1) ## getting the index difference
+
+                # print(table_of_database['Date'])
+
+                ## need to split string first => for other stuff
+                # self.split_string(stock_price_database) ## split the string first and getting all the data
+                ## rerun the previous algorithm to get the data
+                ## think of the number of iteration, may be better if i just use the index to help with the iteration 
+                ## for example, just do something like 
+                # for i in range(index_of_last_date+1,len(self.list_of_date)):
+                ## but first we need to track down the last date's index 
+
+
+                ## making the data in similar format to the table_of_database ## Assume the past data_doesn't exist  
+
                 ## need to check with the data inside to see if it is up to date or not and calucate the resultant missing day or something
                 ## I am thinking about calling the scrapper automatically 
             else:
@@ -240,14 +248,10 @@ class risk_assessment_library:
         
         else: ## if the past record does not exist
             
-            f=open(stock_price_database,'r',encoding="utf8") ### opening the files 
-            self.strings = f.read().split("\n") ## reading the individual content of the file
-            self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
-            
             if self.area == "industry": ## since we are using akshare => that is their ways of doing it
-                num_of_data = self.split_string_for_industry()
+                num_of_data = self.split_string_for_industry(stock_price_database)
             else:
-                num_of_data = self.split_string()
+                num_of_data = self.split_string(stock_price_database)
                 # print(self.list_of_date) ## print the first string to see if it is correct or not
 
             if num_of_data == 10: ## filter the stocks with not enough data
@@ -266,6 +270,30 @@ class risk_assessment_library:
         self.ag, self.agpd,self.number_of_trade,self.average_day, self.day_std_deviation,self.revenue_per_year,self.absolut_trade_winrate,self.draw_win_winrate,self.draw_lose_winrate,self.lose_winrate = self.income() ## doing the final analysis and testing it through the past data by adding the virtual money and see
         self.average_volume = np.mean(self.list_of_volume_of_exchange)*self.list_of_ending_price[-1]  ## calucating the average of all
         # self.close()
+
+    def processing_data(self,filename):
+        f=open(filename,'r',encoding="utf8") ### opening the files 
+        self.strings = f.read().split("\n") ## reading the individual content of the file
+        self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
+        
+        if self.area == "industry": ## since we are using akshare => that is their ways of doing it
+            num_of_data = self.split_string_for_industry()
+        else:
+            num_of_data = self.split_string()
+            # print(self.list_of_date) ## print the first string to see if it is correct or not
+
+        if num_of_data == 10: ## filter the stocks with not enough data
+            self.agpd = -100
+            raise Exception("Not enough data")
+    
+        self.get_date() ## getting the date 
+        self.RSV()  ## getting the rsv list
+        self.rsi_list = self.ema() ##  running through ema function to get the rsi function 
+        self.K()  ## running the k forumla
+        self.d_list = self.D() ## running the d forumla
+        self.MFI_list = self.MFI_list1() ## running MFI list as well
+        self.W_moderate_list,self.W_sell_list = self.W_moderate(self.W_buy,self.W_sell) ## combining and running thr W moderate forumla 
+        # print(self.W_moderate_list_within_class)
 
     def getting_the_list_from_the_file(self,filename):
         '''
@@ -303,11 +331,15 @@ class risk_assessment_library:
                 self.W_moderate_list = np.append(self.W_moderate_list,float(string[10]))
                 self.W_sell_list = np.append(self.W_sell_list,float(string[11]))
     
-    def split_string(self):
+    def split_string(self,stock_price_database):
         '''
         This is the function that we use to split the string
         No need for the input or output
         '''
+        f=open(stock_price_database,'r',encoding="utf8") ### opening the files 
+        self.strings = f.read().split("\n") ## reading the individual content of the file
+        self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
+        
         for string in self.strings:
             string = string.replace('"','')
             string12 = string.split(",", 5)
@@ -326,12 +358,17 @@ class risk_assessment_library:
         else: 
             return 1
         
-    def split_string_for_industry(self):
+    def split_string_for_industry(self,stock_price_database):
         '''
         This is the function that we use to split the string
         No need for the input or output
         It is spectifically for the indistry
         '''
+        f=open(stock_price_database,'r',encoding="utf8") ### opening the files 
+        self.strings = f.read().split("\n") ## reading the individual content of the file
+        self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
+        
+
         for ind in self.data.index:
             self.list_of_date=np.append(self.list_of_date,self.data['日期'][ind])
             self.list_of_ending_price=np.append(self.list_of_ending_price,self.data['收盘'][ind])
@@ -821,7 +858,8 @@ class risk_assessment_library:
             # if lost_very_early:
             ###  Need to check if it drops for more than 3% yesterday 
             ###  More like the price difference between really and it violate the past record law, that is the issue
-            if self.buy_at_ending_price.size>0 and (self.list_of_minimum_price[int(self.comparing_date_purchase[(int(i))]) < self.buy_at_ending_price[buy_in_array_pointer]*(1-losing_rate)]): ## if the minimum price is less than the ending price*0.97
+
+            if (self.buy_at_ending_price.any()> 0 and self.comparing_date_purchase.any() > 0 and self.list_of_minimum_price.any() > 0 ) and (self.list_of_minimum_price[int(self.comparing_date_purchase[(int(i))]) < self.buy_at_ending_price[buy_in_array_pointer]*(1-losing_rate)]): ## if the minimum price is less than the ending price*0.97
                 # print("It dropped more than expected, we need to re-purchase it and re-set the buying price")
                 self.buy_at_ending_price = np.append(self.buy_at_ending_price,self.buy_at_ending_price[buy_in_array_pointer]) ## append the value to the list
                 buying_date = np.append(buying_date,self.list_of_date[int(self.comparing_date_purchase[int(i)])+1]) ## append the date to the buying date list => When we buy and append it to the list
@@ -839,6 +877,9 @@ class risk_assessment_library:
 
             # if self.comparing_date_purchase[int(i)]  == 583:
             #     print("Arrived")
+            if i == len(self.comparing_date_purchase)-1: ## if we are at the last date of the purchase date
+                print("We are at the last date of the purchase date, we need to sell it off")
+                break
 
             ### If not, we can then assume that we can select when to sell 
             if i == 0 or len(buying_date) == len(selling_date): ## we are making a unique trade that jump out of the old cluster (or consecutive buying day)) 
@@ -870,6 +911,19 @@ class risk_assessment_library:
                 #     print(self.buy_at_ending_price) ## print the buy at ending price
                 #     print(buying_date) ## print the buying date
                 #     print(selling_date) ## print the selling date
+                # print(len(self.comparing_date_sell_off))
+                # print("Comparing date purchase: ",self.comparing_date_purchase) ## print the comparing date purchase
+                # print("Comparing date sell off: ",self.comparing_date_sell_off) ## print the comparing date sell off
+                
+
+                if j >= len(self.comparing_date_sell_off)-1: ## if the selling date is the last date in the list
+                    # print("We are at the last date, we need to sell it off")
+                    # print("Comparing date sell off: ",self.comparing_date_sell_off[int(j-1)])
+                    # print(len(self.list_of_date))
+                    # print(self.list_of_date[int(self.comparing_date_sell_off[int(j-1)])+1])
+                    selling_date = np.append(selling_date,self.list_of_date[int(self.comparing_date_sell_off[int(j-1)])]) ## append the date to the selling date list => When we sell and append it to the list
+                    break
+
 
                 if int(self.comparing_date_sell_off[int(j)]+1) - int(self.comparing_date_purchase[int(i)]+1)>=0:
                     # if self.comparing_date_purchase[int(i)]   == 583:

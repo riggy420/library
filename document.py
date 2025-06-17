@@ -138,12 +138,12 @@ def exporting_to_document():
     for string in strings:  ## for each string in the strings
         list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
 
-    # list_of_america = ["KRYS"] ## just for testing purpose, we can remove this later onXLO
+    # list_of_america = ["CPRT"] ## just for testing purpose, we can remove this later onXLO
     for i in list_of_america:
         try:
             print(i)
 
-            filename = "generated_file/America/stock_data/{}_modified.txt".format(i)
+            filename = "generated_file/America/stock_data/{}.txt".format(i)
 
             a = risk_assessment_library(i,W_buy = 17,W_sell =26) ## get the risk assessment library
             Path("generated_file/America/stock_data").mkdir(parents=True, exist_ok=True) ## create the directory if it does not exist
@@ -173,5 +173,6 @@ def exporting_to_document():
 
 if __name__ == "__main__":
     d = document()
-    d.America()
+    # d.America()
+    exporting_to_document()
 
