@@ -236,7 +236,7 @@ class scrapper():
 
                                 df = ticker.history(period='5d', auto_adjust=True)
                                 # df = pd.concat([current_dataframe, df]).drop_duplicates(inplace=True).reset_index(drop=True)
-
+                                # print(df)
                                 print("Updated for 5 days")
                             case _:
                                 print("Refreshing for 5 years")
@@ -298,10 +298,10 @@ class scrapper():
             else:
 
                 if len(df) != 0:
-                    # df.drop(['Dividends'],axis = 1)
-                    # df.drop(['Stock Splits'],axis = 1)
+                    df.drop(['Dividends'],axis = 1)
+                    df.drop(['Stock Splits'],axis = 1)
 
-                    df = df[['Close','High','Low','Open','Volume']]
+                    # df = df[['Close','High','Low','Open','Volume']]
 
                     for i in df.index:
                         for j in df:
@@ -309,10 +309,12 @@ class scrapper():
                     # print(df)
                     current_dataframe.drop_duplicates(subset='Date',inplace=True, ignore_index=True)
                     # current_dataframe['Date'] = pd.to_datetime(current_dataframe['Date'])
-                    df= pd.concat([current_dataframe, df],ignore_index=True).drop_duplicates(inplace=False).reset_index(drop=True)
-                    df.dropna(inplace=True)
-                    # print(df)
-                    df = df.astype(str)
+                    current_dataframe= pd.concat([current_dataframe, df],ignore_index=True).drop_duplicates(inplace=False).reset_index(drop=True)
+
+                    current_dataframe.dropna(inplace=True)
+                    print(current_dataframe)
+                    current_dataframe = current_dataframe.astype(str)
+                    df = current_dataframe
 
                     filename = 'stock_data/'+str(area)+"/"+indexes+'.txt'
                     if Path(filename).exists() == False or refreshing:

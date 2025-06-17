@@ -204,6 +204,7 @@ class risk_assessment_library:
             last_date = str(self.list_of_date[-1])
             print("Current date: ", current_datetime)
             print("Last date in the past record: ", last_date)
+            last_date = last_date+" 00:00:00-04:00"
 
 
             if truth_last_day.strftime("%Y-%m-%d") != last_date :
@@ -211,14 +212,33 @@ class risk_assessment_library:
                 print("The past record is not up to date, need to update the data and use the scrapper and should be able to call for the indivudal one")
                 ## Just cat the pandas dataframe la 
                 ## findig the index of the last date in the list of date
-                index_of_last_date = np.where(self.list_of_date == last_date)[0][0] ## finding the index of the last date in the list of date
+                # index_of_last_date = np.where(self.list_of_date == last_date)[0][0] ## finding the index of the last date in the list of date
                 ## getting the last date in the orginal database
                 table_of_database = pd.read_table(stock_price_database,sep=",",lineterminator="\n",names=['Date','Close','High','Low','Open','Volume']) ## getting the last date in the orginal database
                 ## finding the index of the so called last date in the current database 
-                # print(table_of_database['Date'][:10])
-
                 # print(table_of_database['Date'])
 
+                ## Problem => Not reading the new data
+
+                index = np.where(table_of_database['Date'] == last_date)[0][0] ## finding the index of the last date in the current database
+                print("Index of the last date in the current database: ", index)
+                # print(table_of_database['Date'])
+
+                ## running the standard procedure
+                self.get_date() ## getting the date 
+                # self.RSV()  ## getting the rsv list
+                self.rsi_list = self.ema() ##  running through ema function to get the rsi function 
+                # self.K()  ## running the k forumla
+                # self.d_list = self.D() ## running the d forumla
+                print("Length of ending_price list: ", len(self.list_of_ending_price))
+                print("Length of MFI list: ", len(self.list_of_MFI))
+                print(self.list_of_MFI)
+                self.list_of_MFI = self.MFI_list1(index) ## running MFI list as well
+                print("Afterward:",self.list_of_MFI)
+                # self.W_moderate_list,self.W_sell_list = self.W_moderate(self.W_buy,self.W_sell) ## combining and running thr W moderate forumla 
+                for i in range(index, len(self.list_of_MFI)):
+                    print("MFI value at index {}: {}".format(i, self.list_of_MFI[i]))
+                # print(self.W_moderate_list_within_class)
                 ## need to split string first => for other stuff
                 # self.split_string(stock_price_database) ## split the string first and getting all the data
                 ## rerun the previous algorithm to get the data
@@ -277,9 +297,9 @@ class risk_assessment_library:
         self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
         
         if self.area == "industry": ## since we are using akshare => that is their ways of doing it
-            num_of_data = self.split_string_for_industry()
+            num_of_data = self.split_string_for_industry(filename)
         else:
-            num_of_data = self.split_string()
+            num_of_data = self.split_string(filename)
             # print(self.list_of_date) ## print the first string to see if it is correct or not
 
         if num_of_data == 10: ## filter the stocks with not enough data
@@ -330,7 +350,7 @@ class risk_assessment_library:
                 self.list_of_d_value = np.append(self.list_of_d_value,float(string[9]))
                 self.W_moderate_list = np.append(self.W_moderate_list,float(string[10]))
                 self.W_sell_list = np.append(self.W_sell_list,float(string[11]))
-    
+            
     def split_string(self,stock_price_database):
         '''
         This is the function that we use to split the string
@@ -446,7 +466,7 @@ class risk_assessment_library:
         MFI_value = 100*(1-1/(1+mfr))
         return MFI_value
     
-    def MFI_list1(self):
+    def MFI_list1(self,index=0):
         '''
         This is the function that we use to calculate the MFI value and turn it into a list rather than a value
 
@@ -458,10 +478,16 @@ class risk_assessment_library:
         ----------
         MFI_value `(lsist[float])`: the list of MFI value
         '''
-        for i in range(len(self.list_of_ending_price)-13):
+        # self.x = self.x+index ## set the index to the current index
+        if index != 0:
+            self.x = index-13
+        else:
+            self.x= self.x+index
+        for i in range(index,len(self.list_of_ending_price)-13):
             y = self.MFI()
             self.list_of_MFI=np.append(self.list_of_MFI,y)
             self.x+=1
+            # print(self.x)
 
         return self.list_of_MFI
     
