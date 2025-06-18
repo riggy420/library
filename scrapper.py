@@ -214,6 +214,8 @@ class scrapper():
                     else:
                         print((current_datetime-last_updated_date).days)
                         df = pd.DataFrame()
+                        print(current_datetime)
+                        print(last_updated_date)
 
                         days_difference = (current_datetime - last_updated_date).days
                         if full_scale:
@@ -236,13 +238,14 @@ class scrapper():
 
                                 df = ticker.history(period='5d', auto_adjust=True)
                                 # df = pd.concat([current_dataframe, df]).drop_duplicates(inplace=True).reset_index(drop=True)
-                                # print(df)
+                                print(df)
                                 print("Updated for 5 days")
                             case _:
                                 print("Refreshing for 5 years")
                                 ticker = yf.Ticker(indexes, session=session)
                                 refreshing = True
-                                # df = ticker.history(period='5y', auto_adjust=True)
+                                df = ticker.history(period='5y', auto_adjust=True)
+                                print(df)
 
                 
                 
@@ -283,7 +286,7 @@ class scrapper():
                 df=df.drop(['Stock Splits'],axis = 1)
                 # print(df)
                 ## Converting it to the format
-                df = df[['Close','High','Low','Open','Volume']]
+                # df = df[['Close','High','Low','Open','Volume']]
                 # print(df)
                 for i in df.index:
                     for j in df:
@@ -312,7 +315,7 @@ class scrapper():
                     current_dataframe= pd.concat([current_dataframe, df],ignore_index=True).drop_duplicates(inplace=False).reset_index(drop=True)
 
                     current_dataframe.dropna(inplace=True)
-                    print(current_dataframe)
+                    # print(current_dataframe)
                     current_dataframe = current_dataframe.astype(str)
                     df = current_dataframe
 
