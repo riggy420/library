@@ -1,5 +1,6 @@
 from hmac import new
 import math
+from tkinter import W
 import pandas as pd
 import csv
 import numpy as np
@@ -24,6 +25,7 @@ import requests
 import urllib.parse
 import requests 
 import urllib
+from .scrapper import scrapper
 
 
 class risk_assessment_library:
@@ -153,7 +155,7 @@ class risk_assessment_library:
     draw_lose_winrate = 0
     lose_winrate = 0 
 
-    def __init__(self, name,area="",W_buy=17, W_sell=26,target_rate = 0.03, losing_rate = 0.03):
+    def __init__(self, name,area="",W_buy=17, W_sell=26,target_rate = 0.03, losing_rate = 0.03,replying_on_past_record = True):
         '''
         This is the initialisation of risk_assessment_library
         
@@ -189,7 +191,7 @@ class risk_assessment_library:
                 stock_price_database = r"stock_data/America/{}.txt".format(self.name)
 
         past_record = "generated_file/America/stock_data/{}.txt".format(self.name) ## the past record of the data
-        if os.path.exists(past_record): ## if the past record exists and what if the record is empty tho? 
+        if os.path.exists(past_record) and replying_on_past_record: ## if the past record exists and what if the record is empty tho? 
             self.getting_the_list_from_the_file(past_record)
 
             ## Check if the past record is up to date or not 
@@ -204,6 +206,7 @@ class risk_assessment_library:
             last_date = str(self.list_of_date[-1])
             print("Current date: ", current_datetime)
             print("Last date in the past record: ", last_date)
+            last_date_copy  = last_date ## copy the last date
             last_date = last_date+" 00:00:00-04:00"
 
 
@@ -211,6 +214,7 @@ class risk_assessment_library:
                 ## need to update
                 print("The past record is not up to date, need to update the data and use the scrapper and should be able to call for the indivudal one")
                 ## Just cat the pandas dataframe la 
+                scrapper(self.area,spectific_id=self.name) ## call the scrapper to get the data
                 ## findig the index of the last date in the list of date
                 # index_of_last_date = np.where(self.list_of_date == last_date)[0][0] ## finding the index of the last date in the list of date
                 ## getting the last date in the orginal database
@@ -221,24 +225,64 @@ class risk_assessment_library:
                 ## Problem => Not reading the new data
 
                 index = np.where(table_of_database['Date'] == last_date)[0][0] ## finding the index of the last date in the current database
-                print("Index of the last date in the current database: ", index)
+                # print("Index of the last date in the current database: ", index)
                 # print(table_of_database['Date'])
 
+                ## go checking in the original database 
+                stock_price_database = r"stock_data/America/{}.txt".format(self.name) ## the stock price database
+                ## getting the data from the original database
+                stock_price_database_1 = pd.read_table(stock_price_database,sep=",",lineterminator="\n",names=['Date','Close','High','Low','Open','Volume']) ## getting the data from the original database
+                # print("Last date in the original database: ", stock_price_database_1['Date'].iloc[-1]) ## getting the last date in the original database
+                # print("Last date in the original database: ", np.where(stock_price_database_1['Date']==last_date)[0][0]) ## finding the index of the last date in the original database
+                print(self.list_of_ending_price.shape)
+                
+                self.split_string(stock_price_database,start_date=last_date_copy) ## split the string and get the data from the original database
                 ## running the standard procedure
                 self.get_date() ## getting the date 
-                # self.RSV()  ## getting the rsv list
-                self.rsi_list = self.ema() ##  running through ema function to get the rsi function 
-                # self.K()  ## running the k forumla
-                # self.d_list = self.D() ## running the d forumla
-                print("Length of ending_price list: ", len(self.list_of_ending_price))
-                print("Length of MFI list: ", len(self.list_of_MFI))
-                print(self.list_of_MFI)
+                self.RSV(index)  ## getting the rsv list
+                self.rsi_list = self.ema(index) ##  running through ema function to get the rsi function 
+                # for i in range(1230,len(self.rsi_list)):
+                    # print("i: ",i," RSI value: ",self.rsi_list[i])
+                # print("Length of rsi list: ", len(self.rsi_list))
+                # print("Length of rsv list: ", len(self.list_of_rsv))
+                
+                self.K(index)  ## running the k forumla
+                self.d_list = self.D(index) ## running the d forumla
+                # for i in range(1230,len(self.d_list)):
+                    # print("i: ",i," D value: ",self.d_list[i])
+                # print("Length of ending_price list: ", len(self.list_of_ending_price))
+                # print("Length of MFI list: ", len(self.list_of_MFI))
+                # print(self.list_of_MFI)
                 self.list_of_MFI = self.MFI_list1(index) ## running MFI list as well
-                print("Afterward:",self.list_of_MFI)
-                # self.W_moderate_list,self.W_sell_list = self.W_moderate(self.W_buy,self.W_sell) ## combining and running thr W moderate forumla 
-                for i in range(index, len(self.list_of_MFI)):
-                    print("MFI value at index {}: {}".format(i, self.list_of_MFI[i]))
+                # print("Afterward:",self.list_of_MFI.shape)
+                self.W_moderate_list = np.append(self.W_moderate_list,self.W_moderate(self.W_buy,self.W_sell,index)[0]) ## combining and running thr W moderate forumla
+                self.W_sell_list = np.append(self.W_sell_list,self.W_moderate(self.W_buy,self.W_sell,index)[1]) ## combining and running thr W sell forumla
+
+
+                # print("Length of W_moderate_list: ", len(self.W_moderate_list)) ## print the length of W_moderate_list
+                # print("Length of W_sell_list: ", len(self.W_sell_list)) ## print the length of W_sell_list
+                # print("Length of list_of_ending_price: ", len(self.list_of_ending_price)) ## print the length of list_of_ending_price
+                # print ("Length of list_of_date: ", len(self.list_of_date)) ## print the length of list_of_date
+                # print("Length of list_of_MFI: ", len(self.list_of_MFI)) ## print the length of list_of_MFI
+                # for i in range(1230,len(self.W_moderate_list)):
+                #     print("i: ",i," W_moderate value: ",self.W_moderate_list[i])
+                self.a=13
+                ## Need to rewrite the entire document 
+                with open(past_record, "w") as f: ## append the data to the past record
+                    f.write("Date,Opening_Price,Closing_Price,Maximum_Price,Minimum_Price,Volume_of_Exchange,MFI,RSI,K,D,W_moderate,W_sell\n") ## writing the header for the file
+
+                with open(past_record, "a+") as f:
+                    for i in range(len(self.list_of_opening_price)):
+                        f.write(f"{self.list_of_date[i]},{self.list_of_opening_price[i]},{self.list_of_ending_price[i]},{self.list_of_maximum_price[i]},{self.list_of_minimum_price[i]},{self.list_of_volume_of_exchange[i]},{round(self.list_of_MFI[i],2)},{round(self.rsi_list[i],2)},{round(self.list_of_k_value[i],2)},{round(self.list_of_d_value[i],2)},{round(self.W_moderate_list[i],2)},{round(self.W_sell_list[i],2)}\n")
+                with open(past_record, "a+") as f: ## append the data to the past record
+                    f.write("Ema_up,Ema_down") ## writing the header for the file
+                    f.write(f",{self.ema_up},{self.ema_down}\n") ## writing the ema_up and ema_down value
+
+                print(f"Data for {self.stock_symbol} has been updated in {past_record}") ## print the data has been updated
+                # self.W_moderate_list,self.W_sell_list = self.W_moderate(self.W_buy,self.W_sell,index) ## combining and running thr W moderate forumla 
                 # print(self.W_moderate_list_within_class)
+                # for i in range(1230,len(self.W_moderate_list)):
+                    # print("i: ",i," W_moderate value: ",self.W_moderate_list[i])
                 ## need to split string first => for other stuff
                 # self.split_string(stock_price_database) ## split the string first and getting all the data
                 ## rerun the previous algorithm to get the data
@@ -279,6 +323,8 @@ class risk_assessment_library:
                 raise Exception("Not enough data")
         
             self.get_date() ## getting the date 
+            # print("I am here")
+
             self.RSV()  ## getting the rsv list
             self.rsi_list = self.ema() ##  running through ema function to get the rsi function 
             self.K()  ## running the k forumla
@@ -333,8 +379,14 @@ class risk_assessment_library:
         with open(filename, 'r', encoding='utf8') as f:  ## open the file
             strings = f.read().split("\n")  ## read the file and split by new line
 
-            strings = strings[1:-2]  ## remove the first and the last element
+            strings = strings[1:-1]  ## remove the first and the last element
             for string in strings:
+                if string[:15] == "Ema_up,Ema_down": ## if the string is ema_up,ema_down
+                    string12 = string.split(",") ## split the string by comma
+                    # print(string12)
+                    self.ema_up = float(string12[2]) ## get the ema_up value
+                    self.ema_down = float(string12[3]) ## get the ema_down value
+                    continue
                 string= string.split(",",12)
                 
                 ### append the value to the list
@@ -351,7 +403,7 @@ class risk_assessment_library:
                 self.W_moderate_list = np.append(self.W_moderate_list,float(string[10]))
                 self.W_sell_list = np.append(self.W_sell_list,float(string[11]))
             
-    def split_string(self,stock_price_database):
+    def split_string(self,stock_price_database,start_date=None):
         '''
         This is the function that we use to split the string
         No need for the input or output
@@ -359,20 +411,30 @@ class risk_assessment_library:
         f=open(stock_price_database,'r',encoding="utf8") ### opening the files 
         self.strings = f.read().split("\n") ## reading the individual content of the file
         self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
-        
+        wait = False ## initial value for wait
+        if start_date is not None: ## if the start date is not None
+            wait = True
+            ema_Collecting= True
+
         for string in self.strings:
             string = string.replace('"','')
             string12 = string.split(",", 5)
             # print(string12)
             string12[0]=string12[0][:10]
 
-            self.list_of_date=np.append(self.list_of_date,string12[0])
-            self.list_of_ending_price=np.append(self.list_of_ending_price,float(string12[1]))
-            self.list_of_opening_price=np.append(self.list_of_opening_price,float(string12[4]))
-            self.list_of_maximum_price=np.append(self.list_of_maximum_price,float(string12[2]))
-            self.list_of_minimum_price=np.append(self.list_of_minimum_price,float(string12[3]))
-            self.list_of_volume_of_exchange=np.append(self.list_of_volume_of_exchange,float(string12[5]))
-        
+
+            if wait == True: ## if we are waiting for the start date
+                if string12[0] == start_date:
+                    wait = False
+                    
+            else:
+                self.list_of_date=np.append(self.list_of_date,string12[0])
+                self.list_of_ending_price=np.append(self.list_of_ending_price,float(string12[1]))
+                self.list_of_opening_price=np.append(self.list_of_opening_price,float(string12[4]))
+                self.list_of_maximum_price=np.append(self.list_of_maximum_price,float(string12[2]))
+                self.list_of_minimum_price=np.append(self.list_of_minimum_price,float(string12[3]))
+                self.list_of_volume_of_exchange=np.append(self.list_of_volume_of_exchange,float(string12[5]))
+            
         if (len(self.list_of_date)<28):
             return 10
         else: 
@@ -480,9 +542,13 @@ class risk_assessment_library:
         '''
         # self.x = self.x+index ## set the index to the current index
         if index != 0:
-            self.x = index-13
+            self.x = index-13 -1 
+            index -= 26 +1
+            print("Index:", index)
+            print("self.x value:", self.x)
         else:
-            self.x= self.x+index
+            self.x= index+13
+            
         for i in range(index,len(self.list_of_ending_price)-13):
             y = self.MFI()
             self.list_of_MFI=np.append(self.list_of_MFI,y)
@@ -491,7 +557,7 @@ class risk_assessment_library:
 
         return self.list_of_MFI
     
-    def ema(self):
+    def ema(self,index = 0):
         '''
         This is the function that we use to calculate the ema value
 
@@ -503,7 +569,9 @@ class risk_assessment_library:
         ----------
         rsi `(list[float])`: the value of the rsi
         '''
-        for i in range(1,len(self.list_of_ending_price)):
+        if index != 0:
+            index -= 15 ## set the index to the current index
+        for i in range(index+1,len(self.list_of_ending_price)):
             if (self.list_of_ending_price[i-1]>self.list_of_ending_price[i+1-1]):
                 self.down = np.append(self.down,np.array([self.list_of_ending_price[i-1] - self.list_of_ending_price[i+1-1]]))
                 # self.down +=[self.list_of_ending_price[i-1] - self.list_of_ending_price[i+1-1] ] # need to minus 1 for some reason
@@ -516,38 +584,60 @@ class risk_assessment_library:
                 self.up=np.append(self.up,0)
                 self.down=np.append(self.down,0)
 
-        ema_up = 0
-        ema_down = 0
-        sum_ema_up_list = np.array([],dtype=np.float32)
-        sum_ema_down_list = np.array([],dtype=np.float32)
+        if index == 0:
+            ema_up = 0
+            ema_down = 0
+            sum_ema_up_list = np.array([],dtype=np.float32)
+            sum_ema_down_list = np.array([],dtype=np.float32)
 
-        for i in range(14):
-            ema_up += self.up[i]*(1-self.alpha) ** (i)
-            sum_ema_up_list=np.append(sum_ema_up_list,ema_up)
-            ema_down += self.down[i]*(1-self.alpha) ** (i)
-            sum_ema_down_list=np.append(sum_ema_down_list,ema_down)
+            for i in range(14):
+                ema_up += self.up[i]*(1-self.alpha) ** (i)
+                sum_ema_up_list=np.append(sum_ema_up_list,ema_up)
+                ema_down += self.down[i]*(1-self.alpha) ** (i)
+                sum_ema_down_list=np.append(sum_ema_down_list,ema_down)
 
-        ema_up = ema_up/14
-        ema_down = ema_down/14
+            ema_up = ema_up/14
+            ema_down = ema_down/14
 
         # print(len(self.up))
 
-        for i in range(len(self.up)-self.x-1):
-            ema_up = self.alpha*self.up[self.x+i+1] +(1-self.alpha)*ema_up  #orginally i+12
-            ema_down = self.alpha*self.down[self.x+i+1] +(1-self.alpha)*ema_down
+        if index == 0:
+            for i in range(len(self.up)-self.x-1):
+                ema_up = self.alpha*self.up[self.x+i+1] +(1-self.alpha)*ema_up  #orginally i+12
+                ema_down = self.alpha*self.down[self.x+i+1] +(1-self.alpha)*ema_down
 
-            if ema_down == 0:
-                ema_down = 1/10000
-                rs = ema_up/ema_down
-            else:
-                rs = ema_up/ema_down
+                if ema_down == 0:
+                    ema_down = 1/10000
+                    rs = ema_up/ema_down
+                else:
+                    rs = ema_up/ema_down
 
-            rsi = (1-(1/(1+rs)))*100
-            self.rsi_list=np.append(self.rsi_list,rsi)
+                rsi = (1-(1/(1+rs)))*100
+                self.rsi_list=np.append(self.rsi_list,rsi)
 
-        return self.rsi_list
+        else:
+            ema_up = self.ema_up
+            ema_down = self.ema_down
+
+            ## need to print out more ema_up and ema_down value 
+            for i in range(len(self.up)):
+                ema_up = self.alpha*self.up[i] +(1-self.alpha)*ema_up
+                ema_down = self.alpha*self.down[i] +(1-self.alpha)*ema_down
+
+                if ema_down == 0:
+                    ema_down = 1/10000
+                    rs = ema_up/ema_down
+                else:
+                    rs = ema_up/ema_down
+                rsi = (1-(1/(1+rs)))*100
+                self.rsi_list=np.append(self.rsi_list,rsi)
+            
+        self.ema_up = ema_up
+        self.ema_down = ema_down
+
+        return self.rsi_list ## return the rsi list, so we can use it later on for the W_moderate function
     
-    def RSV(self):
+    def RSV(self,index=0):
         '''
         This is the function that we use to calculate the RSV value
 
@@ -559,8 +649,12 @@ class risk_assessment_library:
         ----------
         list_of_rsv `(list[float])`: the value of the rsv
         '''
-
-        for i in range(13,len(self.list_of_date)):
+        if index != 0: ## if the index is not 0, we need to set the index to the current index
+            index -= 14 ## set the index to the current index
+        else:
+            index = 13
+            
+        for i in range(index,len(self.list_of_date)):
             max_value = np.max(self.list_of_maximum_price[i-13:i+1]) ## finding the max values
             min_value = np.min(self.list_of_minimum_price[i-13:i+1]) ## finding the min values
             value = self.list_of_ending_price[i] ## getting the price of the day
@@ -572,7 +666,7 @@ class risk_assessment_library:
         
         return self.list_of_rsv ## return the entire list
     
-    def K(self):
+    def K(self,index=0):
         '''
         This is the function that we use to calculate the K value
 
@@ -581,12 +675,14 @@ class risk_assessment_library:
         Returns:
         list_of_k_value `(list[float])`: the value of the k value
         '''
+        if index != 0: ## if the index is not 0, we need to set the index to the current index
+            self.k_value = self.list_of_k_value[-1]
         for i in range(len(self.list_of_rsv)):
             self.k_value *=2/3  ## applying the forumla
             self.k_value += self.list_of_rsv[i]/3 ## continue to do so
             self.list_of_k_value=np.append(self.list_of_k_value,self.k_value) ## append the value to the list
 
-    def D(self):
+    def D(self,index=0):
         r'''
         This is the function that we use to calculate the D value
         so the equationis is as follows:
@@ -602,7 +698,12 @@ class risk_assessment_library:
         ----------
         list_of_d_value `(list[float])`: the value of the d value
         '''
-        for i in range(len(self.list_of_k_value)):
+        if index != 0: ## if the index is not 0, we need to set the index to the current index
+            self.d_value = self.list_of_d_value[-1] ## set the d_value to the last value in the list
+            index-=14
+            # print("index: ", index)
+            # print("List of k value: ", self.list_of_k_value.size)
+        for i in range(index,len(self.list_of_k_value)):
             self.d_value *=2/3 ## applying the forumla
             self.d_value += self.list_of_k_value[i]/3 ## continue to do so
             self.list_of_d_value=np.append(self.list_of_d_value,self.d_value) ## append the value to the list
@@ -630,7 +731,7 @@ class risk_assessment_library:
 
         return self.W_list
 
-    def W_moderate(self, W_buy_trade, W_sell_trade): 
+    def W_moderate(self, W_buy_trade, W_sell_trade,index=0): 
         '''
         This is the function that we use to calculate the W_moderate value and return it as a list
 
@@ -650,17 +751,30 @@ class risk_assessment_library:
         '''
         W_moderate_list = np.array([]) ## initial value for W moderate list
         W_sell_list = np.array([]) ## initial value for W sell list
-        for i in range(len(self.list_of_ending_price)-self.a):
+        if index != 0: ## if the index is not 0, we need to set the index to the current index
+            index -= 14 ## set the index to the current index
+            self.a=0
+            # print("index:",index)
+            # print("self.a value: ", len(self.list_of_ending_price)-self.a)
+            
+        for i in range(index,len(self.list_of_ending_price)-self.a):
             temp_array = np.array([]) ## initial value for temp_array, in fact we are just making a container for all three values
             temp_array = np.append(temp_array,self.list_of_MFI[i]) ## append the value of MFI
-            temp_array = np.append(temp_array,self.rsi_list[i-2]) ## append the value of RSI
+            # print("MFI value: ",self.list_of_MFI[i])
+            if index == 0: ## if the index is 0, we need to set the index to the current index
+                temp_array = np.append(temp_array,self.rsi_list[i-2]) ## append the value of RSI
+            else:
+                temp_array = np.append(temp_array,self.rsi_list[i])
+            # print("RSI value: ",self.rsi_list[i-2])
             temp_array = np.append(temp_array,self.list_of_d_value[i]) ## append the value of D
+            # print("D value: ",self.list_of_d_value[i])
             W_moderate = 1/2*0.618**2*np.max(temp_array)+1/2*np.min(temp_array)+1/2*0.618*np.median(temp_array) ## calculate the W_moderate value
             W_sell = 1/2*0.618**2*np.min(temp_array)+1/2*np.max(temp_array)+1/2*0.618*np.median(temp_array) ## calculate the W_sell value
 
             W_moderate_list = np.append(W_moderate_list,W_moderate) ## append the value to the list
             W_sell_list = np.append(W_sell_list,W_sell) ## append the value to the list
-
+            # print("W_moderate value: ", W_moderate) ## print the W_moderate value
+            # print("W_sell value: ", W_sell) ## print the W_sell value
             if W_moderate < W_buy_trade: ## if the W_moderate is less than W_buy
                 self.comparing_date_purchase = np.append(self.comparing_date_purchase,i+self.a) ## append the indices of the purchase date to comparing date purchase
                 self.list_of_reflection = np.append(self.list_of_reflection,i) ## append the value to the list
@@ -669,7 +783,9 @@ class risk_assessment_library:
         
         self.W_moderate_list_within_class = W_moderate_list ## return the entire list
         self.W_sell_list_within_class = W_sell_list ## return the entire list
-
+        
+        print("W_moderate_list: ", W_moderate_list) ## print the W_moderate_list
+        print("W_sell_list: ", W_sell_list) ## print the W_sell_list
         return W_moderate_list,W_sell_list ## return the entire list
 
     def calucate_elasped_days(self,start_date,end_date):
