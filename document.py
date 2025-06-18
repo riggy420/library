@@ -138,21 +138,26 @@ def exporting_to_document():
     for string in strings:  ## for each string in the strings
         list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
 
-    # list_of_america = ["CPRT"] ## just for testing purpose, we can remove this later onXLO
+    list_of_america = ["CPRT"] ## just for testing purpose, we can remove this later onXLO
     for i in list_of_america:
         try:
             print(i)
 
             filename = "generated_file/America/stock_data/{}.txt".format(i)
 
-            a = risk_assessment_library(i,W_buy = 17,W_sell =26) ## get the risk assessment library
+            a = risk_assessment_library(i,W_buy = 17,W_sell =26,replying_on_past_record=False) ## get the risk assessment library
             Path("generated_file/America/stock_data").mkdir(parents=True, exist_ok=True) ## create the directory if it does not exist
-            with open(filename,'a+') as f: ## prepare the file
+            with open(filename,'w') as f: ## prepare the file
                 f.write("Date,Opening_Price,Closing_Price,Maximum_Price,Minimum_Price,Volume_of_Exchange,MFI,RSI,K,D,W_moderate,W_sell\n") ## writing the header for the file
 
             for i in range(15,len(a.list_of_opening_price)):
                 with open(filename, "a+") as f:
                     f.write(f"{a.list_of_date[i]},{a.list_of_opening_price[i]},{a.list_of_ending_price[i]},{a.list_of_maximum_price[i]},{a.list_of_minimum_price[i]},{a.list_of_volume_of_exchange[i]},{a.list_of_MFI[i-13]},{a.rsi_list[i-15]},{a.list_of_k_value[i-13]},{a.list_of_d_value[i-13]},{a.W_moderate_list[i-13]},{a.W_sell_list[i-13]}\n")
+            
+            with open(filename, "a+") as f:
+                f.write("Ema_up,Ema_down")
+                f.write(f",{a.ema_up},{a.ema_down}\n")
+            
             print(f"Data for {a.stock_symbol} has been exported to {filename}")
 
         except IndexError:
@@ -167,9 +172,9 @@ def exporting_to_document():
             print("Zero Division Error for stock symbol:", i)
             pass
 
-        except Exception as e:
-            print(e)
-            pass
+        # except Exception as e:
+        #     print(e)
+        #     pass
 
 if __name__ == "__main__":
     d = document()
