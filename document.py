@@ -43,7 +43,7 @@ class document():
                 if (i=="NCPL" or i == "NUKK" or i == "XBIOW" or i == "WTER" or i=="SHPW" or i =="ISPOW" or i == "LIDRW" or i == "NLSPW" or i == "VSSYW"):
                     continue
 
-                a = risk_assessment_library(i) ## get the risk assessment library
+                a = risk_assessment_library(i,scapper_on_or_off=False) ## get the risk assessment library
 
 
                 percentage_difference_in_W_moderate=(a.W_moderate_list[-1]-a.W_moderate_list[-2])/a.W_moderate_list[-2]*100
@@ -178,6 +178,6 @@ def exporting_to_document():
 
 if __name__ == "__main__":
     d = document()
-    # d.America()
-    exporting_to_document()
+    d.America()
+    # exporting_to_document()
 

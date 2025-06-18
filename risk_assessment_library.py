@@ -25,7 +25,7 @@ import requests
 import urllib.parse
 import requests 
 import urllib
-from .scrapper import scrapper
+from scrapper import scrapper
 
 
 class risk_assessment_library:
@@ -155,7 +155,7 @@ class risk_assessment_library:
     draw_lose_winrate = 0
     lose_winrate = 0 
 
-    def __init__(self, name,area="",W_buy=17, W_sell=26,target_rate = 0.03, losing_rate = 0.03,replying_on_past_record = True):
+    def __init__(self, name,area="",W_buy=17, W_sell=26,target_rate = 0.03, losing_rate = 0.03,replying_on_past_record = True,scapper_on_or_off = True):
         '''
         This is the initialisation of risk_assessment_library
         
@@ -214,7 +214,9 @@ class risk_assessment_library:
                 ## need to update
                 print("The past record is not up to date, need to update the data and use the scrapper and should be able to call for the indivudal one")
                 ## Just cat the pandas dataframe la 
-                scrapper(self.area,spectific_id=self.name) ## call the scrapper to get the data
+                if scapper_on_or_off:
+
+                    scrapper(self.area,spectific_id=self.name) ## call the scrapper to get the data
                 ## findig the index of the last date in the list of date
                 # index_of_last_date = np.where(self.list_of_date == last_date)[0][0] ## finding the index of the last date in the list of date
                 ## getting the last date in the orginal database
@@ -381,6 +383,7 @@ class risk_assessment_library:
 
             strings = strings[1:-1]  ## remove the first and the last element
             for string in strings:
+                # print(string)
                 if string[:15] == "Ema_up,Ema_down": ## if the string is ema_up,ema_down
                     string12 = string.split(",") ## split the string by comma
                     # print(string12)
@@ -410,7 +413,10 @@ class risk_assessment_library:
         '''
         f=open(stock_price_database,'r',encoding="utf8") ### opening the files 
         self.strings = f.read().split("\n") ## reading the individual content of the file
-        self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
+        if start_date is not None: ## if the start date is not None
+            self.strings = self.strings[1:-1] ## remove the first element if the start date is not None
+        else:
+            self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
         wait = False ## initial value for wait
         if start_date is not None: ## if the start date is not None
             wait = True
@@ -784,8 +790,8 @@ class risk_assessment_library:
         self.W_moderate_list_within_class = W_moderate_list ## return the entire list
         self.W_sell_list_within_class = W_sell_list ## return the entire list
         
-        print("W_moderate_list: ", W_moderate_list) ## print the W_moderate_list
-        print("W_sell_list: ", W_sell_list) ## print the W_sell_list
+        # print("W_moderate_list: ", W_moderate_list) ## print the W_moderate_list
+        # print("W_sell_list: ", W_sell_list) ## print the W_sell_list
         return W_moderate_list,W_sell_list ## return the entire list
 
     def calucate_elasped_days(self,start_date,end_date):
