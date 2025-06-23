@@ -304,6 +304,10 @@ class scrapper():
                     df.drop(['Dividends'],axis = 1)
                     df.drop(['Stock Splits'],axis = 1)
 
+                    if 'Capital Gains' in df.columns:
+                        df.drop(['Capital Gains'],axis = 1, inplace=True)
+                
+
                     # df = df[['Close','High','Low','Open','Volume']]
 
                     for i in df.index:
