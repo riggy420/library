@@ -781,7 +781,7 @@ def exporting_to_document():
             print(e)
             pass
 
-class trainer(try_out):
+class trainer(risk_assessment_library):
     '''
     This is the trainer class that we use to train the model
     '''
@@ -792,25 +792,35 @@ class trainer(try_out):
         self.stock_symbol = stock_symbol ## the stock symbol
         self.area = "america" ## the area of the stock symbol	
         past_record = "generated_file/America/stock_data/{}.txt".format(self.name) ## the past record of the data
+        self.W_buy_list = W_buy_list ## the list of W_buy
+        self.W_sell_list = W_sell_list ## the list of W_sell
+        self.target_rate_list = target_rate_list ## the list of target rate
+        self.losing_rate_list = losing_rate_list ## the list of losing rate
         if os.path.exists(past_record): ## if the past record exists
             self.getting_the_list_from_the_file(past_record) ## get the list from the file
         else:
             print("The file does not exist, please run the try_out function first") ## if the file does not exist, then we just print the message
             exit()
 
-        ## storing the result 
 
+        ## need volume data to be more than 1000000
+
+
+        ## storing the result 
         self.result_revenue_list = np.array([]) ## the result list
         self.result_winrate_list = np.array([]) ## the result winrate list
         self.result_number_of_trade_list = np.array([]) ## the result number of trade list
 
         for i in range(len(W_buy_list)):
+            if np.average(self.list_of_volume_of_exchange) * self.list_of_ending_price[-1] < 1000000: ## if the average volume of exchange is less than 1000000
+                print(f"Average volume of exchange for {self.stock_symbol} is less than 1000000, skipping W_buy: {W_buy_list[i]}")
+                break
             for j in range(len(W_sell_list)):
                 for k in range(len(target_rate_list)):
                     for l in range(len(losing_rate_list)):
                         
                         for m in range(len(self.list_of_ending_price)-self.a):
-                            if self.W_moderate_list[m] < W_buy_list[i]: ## if the W_moderate is less than W_buy
+                            if self.W_moderate_list[m] < W_buy_list[i]: ## if e W_moderate is less than W_buy
                                 self.comparing_date_purchase = np.append(self.comparing_date_purchase,m+self.a) ## append the indices of the purchase date in the list of_date to comparing date purchase
                                 self.list_of_reflection = np.append(self.list_of_reflection,m) ## append the value to the list
                             if self.W_sell_list[m] > W_sell_list[j]: ## if the W_sell is greater than W_sell
@@ -830,6 +840,20 @@ class trainer(try_out):
         self.result_winrate_list = np.reshape(self.result_winrate_list, (len(W_buy_list), len(W_sell_list), len(target_rate_list), len(losing_rate_list))) ## reshape the result winrate list
         self.result_number_of_trade_list = np.reshape(self.result_number_of_trade_list, (len(W_buy_list), len(W_sell_list), len(target_rate_list), len(losing_rate_list))) ## reshape the result number of trade list
         print("Training completed for stock symbol:", self.stock_symbol) ## print the training completed message
+        
+
+    def best_option(self):
+        '''
+        This is the function that we use to get the best option from the result
+        '''
+        ## best option found (winrate)
+        max_winrate = np.max(self.result_winrate_list) ## get the maximum winrate
+        max_winrate_indices = np.argwhere(self.result_winrate_list == max_winrate)
+        print("Best options found in terms of winrate:", max_winrate) ## print the best options found in terms of winrate
+        print(f"And it is using the parameters of W_buy: {self.W_buy_list[max_winrate_indices[0][0]]}, W_sell: {self.W_sell_list[max_winrate_indices[0][1]]}, target_rate: {self.target_rate_list[max_winrate_indices[0][2]]}, losing_rate: {self.losing_rate_list[max_winrate_indices[0][3]]}")
+        return_string = f"Winrate: {max_winrate},W_buy: {self.W_buy_list[max_winrate_indices[0][0]]}, W_sell: {self.W_sell_list[max_winrate_indices[0][1]]}, target_rate: {self.target_rate_list[max_winrate_indices[0][2]]}, losing_rate: {self.losing_rate_list[max_winrate_indices[0][3]]}, Win_rate:{max_winrate}\n"
+        # print(return_string) ## print the return string
+        return return_string ## return the string
         # print("Best options found in terms of winrate:", max(self.result_winrate_list)) ## print the best options found in terms of winrate
         # print(f"And it is using the parameters of {np.argwhere(self.result_revenue_list,max(self.result_winrate_list))}")
         # print("Best options found in terms of revenue:", max(self.result_revenue_list)) ## print the best options found in terms of revenue
@@ -906,19 +930,66 @@ def overview():
 
 
 if __name__ == "__main__":
-    import time as timer
-    timer1 = timer.time_ns()  # Start the timer
-    trainer("AADR",
-            W_buy_list=np.arange(15, 20, 0.2).tolist(),
-            W_sell_list=np.arange(25, 30, 0.2).tolist(),
-            target_rate_list=np.arange(0.03, 0.05, 0.002).tolist(),
-            losing_rate_list=np.arange(0.03, 0.05, 0.002).tolist()
-        )
+    # import time as timer
+    # timer1 = timer.time_ns()  # Start the timer
     
-    timer2 = timer.time_ns()  # End the timer
-    print(f"Time taken for the operation: {(timer2 - timer1) / 1e9} seconds")  # Print the time taken for the operation
+    # trainer("AADR",
+    #         W_buy_list=np.arange(15, 20, 0.2).tolist(),
+    #         W_sell_list=np.arange(25, 30, 0.2).tolist(),
+    #         target_rate_list=[0.03],
+    #         losing_rate_list=[0.03]
+    #     )
+    ## preparing the document 
+    stock_price_america = r"stock_list/nasdaqlisted.txt" ## getting the reference 
+    list_of_america = [] ## the list of all the stock symbol in America
+    f= open(stock_price_america,"r",encoding="utf8") ## open the file
+    strings = f.read().split("\n") ## read the file and split by new line
+    strings = strings[1:-1]    ## remove the first and the last element
+
+    for string in strings:  ## for each string in the strings
+        list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
+
+    filename = "best_option.txt" ## the file that we are going to write on
+    with open(filename,'w') as f: ## prepare the file
+        f.write("Stock_ID,Best_winrate,W_buy,W_sell,target_rate,losing_rate\n") ## writing the header for the file
+    for i in list_of_america:  ## for each stock symbol in the list of america
+        try:
+            best_option = trainer(i,
+                    W_buy_list=np.arange(15, 20, 0.2).tolist(),
+                    W_sell_list=np.arange(25, 30, 0.2).tolist(),
+                    target_rate_list=[0.03],
+                    losing_rate_list=[0.03]
+                ).best_option()
+            print(best_option)
+            with open(filename, "a+") as f:
+                # Parse best_option string robustly
+                parts = best_option.replace('\n', '').split(',')
+                winrate = parts[0].split('Winrate: ')[1]
+                W_buy = parts[1].split('W_buy: ')[1]
+                W_sell = parts[2].split('W_sell: ')[1]
+                target_rate = parts[3].split('target_rate: ')[1]
+                losing_rate = parts[4].split('losing_rate: ')[1]
+                f.write(f"{i},{winrate},{W_buy},{W_sell},{target_rate},{losing_rate}\n")
+        except IndexError:
+            print("Index Error for stock symbol:", i)
+            pass
+        except FileNotFoundError:
+            print("File Not found error for stock symbol:", i)
+            pass
+        except ZeroDivisionError:
+            print("Zero Division Error for stock symbol:", i)
+            pass
+        except Exception as e:
+            print(f"An error occurred for stock symbol {i}: {e}")
+            pass
+
+
+            
+
+    # timer2 = timer.time_ns()  # End the timer
+    # print(f"Time taken for the operation: {(timer2 - timer1) / 1e9} seconds")  # Print the time taken for the operation
     
-    
+
     # time1 = time.time_ns()
     
     # stock_symbol = "AADR"  # Example stock symbol

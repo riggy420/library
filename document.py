@@ -30,7 +30,7 @@ class document():
         ## Now we have the list of all the stock in America
         ## Now we need to get the stock price of all the stock in America
 
-        with open(filename,'a+') as f: ## prepare the file
+        with open(filename,'w') as f: ## prepare the file
             ## writing the header for the file
             f.write("Stock_ID" + " " + "AGPD_value" + " Current_price "+ "Number_of_Trade"+ " "+"W_buy_value_now" + " " + "W_sell_value"+ " "+"day_last_update" + " "+"Average_day"+ " " + "Day_standard_deviation " +"W_moderate_%_diff"+" "+"five_day_average_of_W_buy"+ " "+"Days_have_been_below_17"+" "+"Averag_Volume"+"\n") 
 
@@ -43,7 +43,7 @@ class document():
                 if (i=="NCPL" or i == "NUKK" or i == "XBIOW" or i == "WTER" or i=="SHPW" or i =="ISPOW" or i == "LIDRW" or i == "NLSPW" or i == "VSSYW"):
                     continue
 
-                a = risk_assessment_library(i,scapper_on_or_off=False) ## get the risk assessment library
+                a = risk_assessment_library(i,replying_on_past_record= False, scapper_on_or_off=False) ## get the risk assessment library
 
 
                 percentage_difference_in_W_moderate=(a.W_moderate_list[-1]-a.W_moderate_list[-2])/a.W_moderate_list[-2]*100
@@ -67,9 +67,9 @@ class document():
                 print("Zero ")
                 pass 
 
-            except Exception as e:
-                print(e)
-                pass
+            # except Exception as e:
+            #     print(e)
+            #     pass
 
 
 def document_overview_winrate(winrate_requirement:float):
@@ -138,7 +138,7 @@ def exporting_to_document():
     for string in strings:  ## for each string in the strings
         list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
 
-    list_of_america = ["CPRT"] ## just for testing purpose, we can remove this later onXLO
+    # list_of_america = ["AAOI"] ## just for testing purpose, we can remove this later onXLO
     for i in list_of_america:
         try:
             print(i)
@@ -172,9 +172,9 @@ def exporting_to_document():
             print("Zero Division Error for stock symbol:", i)
             pass
 
-        # except Exception as e:
-        #     print(e)
-        #     pass
+        except Exception as e:
+            print(e)
+            pass
 
 if __name__ == "__main__":
     d = document()
