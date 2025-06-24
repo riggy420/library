@@ -1,6 +1,4 @@
-from hmac import new
 import math
-from tkinter import W
 import pandas as pd
 import csv
 import numpy as np
@@ -192,8 +190,30 @@ class risk_assessment_library:
 
         past_record = "generated_file/America/stock_data/{}.txt".format(self.name) ## the past record of the data
         if os.path.exists(past_record) and replying_on_past_record: ## if the past record exists and what if the record is empty tho? 
-            self.getting_the_list_from_the_file(past_record)
+            try: 
+                self.getting_the_list_from_the_file(past_record)
+                print("last date: ",self.list_of_date[-1]) ## print the last date in the past record
+            except FileNotFoundError: ## if the file does not exist
+                print("File not found, need to create the file")
+                self.close()
+                self.processing_data(stock_price_database) ## process the data from the stock price database
+                self.write_to_file(past_record) ## write the data to the file
+                print("Data reset and reprocessed due to a missing file.")
+            except IndexError: ## if the file is empty
+                print("File is empty, need to create the file")
+                self.close()
+                self.processing_data(stock_price_database) ## process the data from the stock price database
+                self.write_to_file(past_record) ## write the data to the file
+                print("Data reset and reprocessed due to an empty file.")
+            except Exception as e: ## if there is any other exception
+                print(f"An error occurred while getting the list from the file: {e}")
+                ## we can force make the files?
+                self.close()
+                self.processing_data(stock_price_database) ## process the data from the stock price database
+                self.write_to_file(past_record) ## write the data to the file
+                print("Data reset and reprocessed due to an error in reading the file.")
 
+            print("The past record exists, we can use it")
             ## Check if the past record is up to date or not 
             import pandas as pd
             from pandas.tseries.holiday import USFederalHolidayCalendar
@@ -210,12 +230,11 @@ class risk_assessment_library:
             last_date = last_date+" 00:00:00-04:00"
 
 
-            if truth_last_day.strftime("%Y-%m-%d") != last_date :
+            if truth_last_day.strftime("%Y-%m-%d") != last_date_copy :
                 ## need to update
                 print("The past record is not up to date, need to update the data and use the scrapper and should be able to call for the indivudal one")
                 ## Just cat the pandas dataframe la 
                 if scapper_on_or_off:
-
                     scrapper(self.area,spectific_id=self.name) ## call the scrapper to get the data
                 ## findig the index of the last date in the list of date
                 # index_of_last_date = np.where(self.list_of_date == last_date)[0][0] ## finding the index of the last date in the list of date
@@ -361,7 +380,32 @@ class risk_assessment_library:
         self.d_list = self.D() ## running the d forumla
         self.MFI_list = self.MFI_list1() ## running MFI list as well
         self.W_moderate_list,self.W_sell_list = self.W_moderate(self.W_buy,self.W_sell) ## combining and running thr W moderate forumla 
-        # print(self.W_moderate_list_within_class)
+        print(self.W_moderate_list)
+    
+    def write_to_file(self,filename):
+        '''
+        This is the function that we use to write the data to the file
+
+        -----------
+        Parameters(Inputs):
+        -----------
+        * filename `(str)`: the name of the file that we want to write
+
+        -----------
+        Returns:
+        -----------
+        nothing but write the data to the file
+        '''
+        with open(filename, "w") as f:
+            f.write("Date,Opening_Price,Closing_Price,Maximum_Price,Minimum_Price,Volume_of_Exchange,MFI,RSI,K,D,W_moderate,W_sell\n")
+        
+        for i in range(len(self.list_of_opening_price)):
+            with open(filename, "a+") as f:
+                f.write(f"{self.list_of_date[i]},{self.list_of_opening_price[i]},{self.list_of_ending_price[i]},{self.list_of_maximum_price[i]},{self.list_of_minimum_price[i]},{self.list_of_volume_of_exchange[i]},{self.list_of_MFI[i-13]},{self.rsi_list[i-15]},{self.list_of_k_value[i-13]},{self.list_of_d_value[i-13]},{self.W_moderate_list[i-13]},{self.W_sell_list[i-13]}\n")
+        
+        with open(filename, "a+") as f: ## append the data to the past record
+            f.write("Ema_up,Ema_down") ## writing the header for the file
+            f.write(f",{self.ema_up},{self.ema_down}\n") ## writing the ema_up and ema_down value
 
     def getting_the_list_from_the_file(self,filename):
         '''
@@ -1129,6 +1173,7 @@ class risk_assessment_library:
                             past_record = int(k) ## update the past record to the current k value
 
                             # i-=1
+                            date_purchase +=1
 
                             break ## break the loop since we have found the drop too much point
                     
@@ -1316,8 +1361,8 @@ class risk_assessment_library:
         # print("Number of trades : ",len(self.buy_at_ending_price)) ## print the number of trades
         # print("Number of sell_of: ",len(self.sell_at_ending_price)) ## print the number of buy in
 
-        # print("buying date : ",buying_date) ## print the buying date
-        # print("selling date : ",selling_date) ## print the selling date
+        print("buying date : ",buying_date) ## print the buying date
+        print("selling date : ",selling_date) ## print the selling date
 
         # for i in range(len(self.buy_at_ending_price)):
         for i in range(len(buying_date)):
@@ -1511,7 +1556,7 @@ class risk_assessment_library:
 if __name__ == "__main__":
     ## demo program for running the thing
     time1 = time.time_ns() ##recording the time
-    a = risk_assessment_library("CPRT",W_buy=17,W_sell=26,target_rate=0.04,losing_rate=0.04) ## running the object and get the object
+    a = risk_assessment_library("AACG",W_buy=17,W_sell=26,target_rate=0.04,losing_rate=0.04) ## running the object and get the object
     a.print_info() ## print the information of the object
     # print(a.number_of_trade)
     # print(a.W_moderate_list_within_class[-1]) ## printing the W moderate list within class
