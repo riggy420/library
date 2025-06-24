@@ -12,3 +12,8 @@ main:
 
 test:
 	python test_out.py
+
+var ?= America
+
+update:
+	python scrapper.py $(var) $(var2)

@@ -238,14 +238,14 @@ class scrapper():
 
                                 df = ticker.history(period='5d', auto_adjust=True)
                                 # df = pd.concat([current_dataframe, df]).drop_duplicates(inplace=True).reset_index(drop=True)
-                                print(df)
+                                # print(df)
                                 print("Updated for 5 days")
                             case _:
                                 print("Refreshing for 5 years")
                                 ticker = yf.Ticker(indexes, session=session)
                                 refreshing = True
                                 df = ticker.history(period='5y', auto_adjust=True)
-                                print(df)
+                                # print(df)
 
                 
                 
@@ -279,9 +279,15 @@ class scrapper():
                 if df.empty:
                     print("Something is wrong with the data")
                     print("Skipping this index")
+                    print(f"Data for {indexes} is empty after reset.")
+                    # raise ValueError(f"Data for {indexes} is empty after reset.")
+                    continue
                 else:
                     print(indexes+" finished downloading after reset")
                 
+                if 'Capital Gains' in df.columns:
+                    df.drop(['Capital Gains'],axis = 1, inplace=True)
+            
                 df=df.drop(['Dividends'],axis = 1)
                 df=df.drop(['Stock Splits'],axis = 1)
                 # print(df)
@@ -307,18 +313,38 @@ class scrapper():
                     if 'Capital Gains' in df.columns:
                         df.drop(['Capital Gains'],axis = 1, inplace=True)
                 
-
                     # df = df[['Close','High','Low','Open','Volume']]
 
                     for i in df.index:
                         for j in df:
                             df.loc[i,j] = round(float(df.loc[i,j]),2)
+                    
+                    df = df.reset_index().rename(columns={"index":"Date"})
+                    
                     # print(df)
-                    current_dataframe.drop_duplicates(subset='Date',inplace=True, ignore_index=True)
-                    # current_dataframe['Date'] = pd.to_datetime(current_dataframe['Date'])
-                    current_dataframe= pd.concat([current_dataframe, df],ignore_index=True).drop_duplicates(inplace=False).reset_index(drop=True)
+                    df.drop(['Dividends'],axis = 1, inplace=True)
+                    df.drop(['Stock Splits'],axis = 1, inplace=True)
 
+                    if 'Capital Gains' in df.columns:
+                        df.drop(['Capital Gains'],axis = 1, inplace=True)
+                
+                    # print('The original dataframe')
+                    current_dataframe.drop_duplicates(subset='Date',inplace=True, ignore_index=True)
+                    current_dataframe['Date'] = pd.to_datetime(current_dataframe['Date'])
+                    
+                    # print(current_dataframe)
+                    # print("The about to update dataframe")
+                    # print(df)
+                    ## Here cause the trouble afterward
+
+                    # print(pd.concat([current_dataframe, df],ignore_index=True))
+                    
+                    current_dataframe= pd.concat([current_dataframe, df],ignore_index=True)
+                    # current_dataframe['Date']=pd.to_datetime(current_dataframe['Date'], format='%Y-%m-%d', errors='coerce')
+                    # print(current_dataframe)
+                    current_dataframe=current_dataframe.drop_duplicates(subset='Date', inplace=False, ignore_index=True,keep='last')
                     current_dataframe.dropna(inplace=True)
+                    # print("the integrated dataframe")
                     # print(current_dataframe)
                     current_dataframe = current_dataframe.astype(str)
                     df = current_dataframe
