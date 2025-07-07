@@ -67,9 +67,9 @@ class document():
                 print("Zero ")
                 pass 
 
-            # except Exception as e:
-            #     print(e)
-            #     pass
+            except Exception as e:
+                print(e)
+                pass
 
 
 def document_overview_winrate(winrate_requirement:float):
