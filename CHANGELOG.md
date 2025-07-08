@@ -31,3 +31,15 @@
 ### Modified
 
 - scrapper.py as we are introducing a new feature where we just keep on appending new pandas dataframe 
+
+### Looking forward 
+
+Things that we want to achieve really
+
+2.0 version need to do
+- Introducing RESTful API framework  (need to setup server and make callback) may need to add Postman request? and send back json
+- Website and we may need to do a demo in Figma and reinnovate it
+- Attemp to make a package, VM-ware apple software? => aiming to do [package name] update / [package name] make/website
+- I mean if we have the server, we may as well use Docker nginx to produce the desired container for the website
+- more to add on => Supervisied learning 
+- Change the file storage engine to mysql?? so that it can be done in a much more easier fashion

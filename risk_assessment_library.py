@@ -189,11 +189,15 @@ class risk_assessment_library:
             else:
                 self.area= "America"
                 stock_price_database = r"stock_data/America/{}.txt".format(self.name)
+        
+        ## Update the data if the scrapper is on
+        if scapper_on_or_off:
+            scrapper(self.area,spectific_id=self.name) ## call the scrapper to get the data
 
         past_record = "generated_file/America/stock_data/{}.txt".format(self.name) ## the past record of the data
         if os.path.exists(past_record) and replying_on_past_record: ## if the past record exists and what if the record is empty tho? 
             self.getting_the_list_from_the_file(past_record)
-
+            self.orginal_length = len(self.list_of_date) ## getting the orginal length of the list of date
             ## Check if the past record is up to date or not 
             import pandas as pd
             from pandas.tseries.holiday import USFederalHolidayCalendar
@@ -207,15 +211,14 @@ class risk_assessment_library:
             print("Current date: ", current_datetime)
             print("Last date in the past record: ", last_date)
             last_date_copy  = last_date ## copy the last date
-            last_date = last_date+" 00:00:00-04:00"
+            # last_date = last_date+" 00:00:00-04:00" ## the format is kind of wrong => May need to go back to the scrapper to revert the changes
 
 
             if truth_last_day.strftime("%Y-%m-%d") != last_date :
                 ## need to update
                 print("The past record is not up to date, need to update the data and use the scrapper and should be able to call for the indivudal one")
                 ## Just cat the pandas dataframe la 
-                if scapper_on_or_off:
-                    scrapper(self.area,spectific_id=self.name) ## call the scrapper to get the data
+
                 ## findig the index of the last date in the list of date
                 # index_of_last_date = np.where(self.list_of_date == last_date)[0][0] ## finding the index of the last date in the list of date
                 ## getting the last date in the orginal database
@@ -225,6 +228,7 @@ class risk_assessment_library:
 
                 ## Problem => Not reading the new data
 
+                print(last_date)
                 index = np.where(table_of_database['Date'] == last_date)[0][0] ## finding the index of the last date in the current database
                 # print("Index of the last date in the current database: ", index)
                 # print(table_of_database['Date'])
@@ -237,25 +241,32 @@ class risk_assessment_library:
                 # print("Last date in the original database: ", np.where(stock_price_database_1['Date']==last_date)[0][0]) ## finding the index of the last date in the original database
                 # print(self.list_of_ending_price.shape)
                 
+
+                ### we are concating two big chunk of data together as we didn't differentiate the data from the past record and the new data
                 self.split_string(stock_price_database,start_date=last_date_copy) ## split the string and get the data from the original database
+                
                 ## running the standard procedure
                 self.get_date() ## getting the date 
                 self.RSV(index)  ## getting the rsv list
+                print(self.list_of_rsv)
+                # print("Length of date list: ", len(self.list_of_date)) ## print the length of date list
                 self.rsi_list = self.ema(index) ##  running through ema function to get the rsi function 
-                # for i in range(1230,len(self.rsi_list)):
-                    # print("i: ",i," RSI value: ",self.rsi_list[i])
+                # for i in range(1230,len(self.rsi_list)): ## Appear some duplicate value 
+                #     print("i: ",i," RSI value: ",self.rsi_list[i])
                 # print("Length of rsi list: ", len(self.rsi_list))
                 # print("Length of rsv list: ", len(self.list_of_rsv))
                 
                 self.K(index)  ## running the k forumla
-                self.d_list = self.D(index) ## running the d forumla
+                self.d_list = self.D(index) ## running the d forumla ## didn;t appear for some reason
                 # for i in range(1230,len(self.d_list)):
-                    # print("i: ",i," D value: ",self.d_list[i])
+                #     print("i: ",i," D value: ",self.d_list[i])
                 # print("Length of ending_price list: ", len(self.list_of_ending_price))
                 # print("Length of MFI list: ", len(self.list_of_MFI))
                 # print(self.list_of_MFI)
                 self.list_of_MFI = self.MFI_list1(index) ## running MFI list as well
                 # print("Afterward:",self.list_of_MFI.shape)
+                # for i in range(1230,len(self.list_of_MFI)): ## more then antipicated 
+                #     print("i: ",i," MFI value: ",self.list_of_MFI[i])
                 self.W_moderate_list = np.append(self.W_moderate_list,self.W_moderate(self.W_buy,self.W_sell,index)[0]) ## combining and running thr W moderate forumla
                 self.W_sell_list = np.append(self.W_sell_list,self.W_moderate(self.W_buy,self.W_sell,index)[1]) ## combining and running thr W sell forumla
 
@@ -268,7 +279,8 @@ class risk_assessment_library:
                 # for i in range(1230,len(self.W_moderate_list)):
                 #     print("i: ",i," W_moderate value: ",self.W_moderate_list[i])
                 self.a=13
-                ## Need to rewrite the entire document 
+
+                ## Need to rewrite the entire document  // should be using dataframe to handle it? like pandas dataframe
                 with open(past_record, "w") as f: ## append the data to the past record
                     f.write("Date,Opening_Price,Closing_Price,Maximum_Price,Minimum_Price,Volume_of_Exchange,MFI,RSI,K,D,W_moderate,W_sell\n") ## writing the header for the file
 
@@ -759,20 +771,25 @@ class risk_assessment_library:
         if index != 0: ## if the index is not 0, we need to set the index to the current index
             index -= 14 ## set the index to the current index
             self.a=0
+        else:
+            self.orginal_length = 0 
             # print("index:",index)
             # print("self.a value: ", len(self.list_of_ending_price)-self.a)
-            
+        print("index:",index)
+        print("Number of iteration that it need go through:", len(self.list_of_ending_price)-self.a)
         for i in range(index,len(self.list_of_ending_price)-self.a):
             temp_array = np.array([]) ## initial value for temp_array, in fact we are just making a container for all three values
-            temp_array = np.append(temp_array,self.list_of_MFI[i]) ## append the value of MFI
+            # print("i: ",i-self.orginal_length) ## print the index
+            temp_array = np.append(temp_array,self.list_of_MFI[i-self.orginal_length]) ## append the value of MFI
             # print("MFI value: ",self.list_of_MFI[i])
             if index == 0: ## if the index is 0, we need to set the index to the current index
                 temp_array = np.append(temp_array,self.rsi_list[i-2]) ## append the value of RSI
             else:
-                temp_array = np.append(temp_array,self.rsi_list[i])
+                temp_array = np.append(temp_array,self.rsi_list[i-self.orginal_length])
             # print("RSI value: ",self.rsi_list[i-2])
-            temp_array = np.append(temp_array,self.list_of_d_value[i]) ## append the value of D
+            temp_array = np.append(temp_array,self.list_of_d_value[i-self.orginal_length]) ## append the value of D
             # print("D value: ",self.list_of_d_value[i])
+            # break
             W_moderate = 1/2*0.618**2*np.max(temp_array)+1/2*np.min(temp_array)+1/2*0.618*np.median(temp_array) ## calculate the W_moderate value
             W_sell = 1/2*0.618**2*np.min(temp_array)+1/2*np.max(temp_array)+1/2*0.618*np.median(temp_array) ## calculate the W_sell value
 
@@ -1565,7 +1582,7 @@ class risk_assessment_library:
 if __name__ == "__main__":
     ## demo program for running the thing
     time1 = time.time_ns() ##recording the time
-    a = risk_assessment_library("AACG",W_buy=17,W_sell=26,target_rate=0.04,losing_rate=0.04,replying_on_past_record=False,scapper_on_or_off=False) ## running the object and get the object
+    a = risk_assessment_library("AAXJ",W_buy=17,W_sell=26,target_rate=0.04,losing_rate=0.04,replying_on_past_record=True,scapper_on_or_off=True) ## running the object and get the object
     a.print_info() ## print the information of the object
     # print(a.number_of_trade)
     # for i in range(len(a.W_moderate_list_within_class)):
