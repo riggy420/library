@@ -867,9 +867,12 @@ class trainer(risk_assessment_library):
             print("The file does not exist, please run the try_out function first") ## if the file does not exist, then we just print the message
             exit()
 
+        self.average_volume = np.mean(self.list_of_volume_of_exchange) * self.list_of_ending_price[-1] ## calculate the average volume of exchange
 
-        ## need volume data to be more than 1000000
 
+        # ## need volume data to be more than 1000000
+        # if self.average_volume < 100000: ## if the average volume is less than 1000000
+        #     return 
 
         ## storing the result 
         self.result_revenue_list = np.array([]) ## the result list
@@ -879,6 +882,9 @@ class trainer(risk_assessment_library):
         for i in range(len(W_buy_list)):
             if np.average(self.list_of_volume_of_exchange) * self.list_of_ending_price[-1] < 1000000: ## if the average volume of exchange is less than 1000000
                 print(f"Average volume of exchange for {self.stock_symbol} is less than 1000000, skipping W_buy: {W_buy_list[i]}")
+                break
+            if self.list_of_ending_price[-1] < 2:
+                print(f"Ending price for {self.stock_symbol} is less than 2, skipping W_buy: {W_buy_list[i]}")
                 break
             for j in range(len(W_sell_list)):
                 for k in range(len(target_rate_list)):
@@ -907,7 +913,7 @@ class trainer(risk_assessment_library):
         print("Training completed for stock symbol:", self.stock_symbol) ## print the training completed message
         
 
-    def best_option(self):
+    def best_option_winrate(self):
         '''
         This is the function that we use to get the best option from the result
         '''
@@ -924,6 +930,23 @@ class trainer(risk_assessment_library):
         # print("Best options found in terms of revenue:", max(self.result_revenue_list)) ## print the best options found in terms of revenue
 
         # print("Best options found in terms of number of trades:", max(self.result_number_of_trade_list)) ## print the best options found in terms of number of trades
+    def best_option_revenue(self):
+        '''
+        This is the function that we use to get the best option from the result
+        '''
+        ## best option found (revenue)
+        max_revenue = np.max(self.result_revenue_list)
+        max_revenue_indices = np.argwhere(self.result_revenue_list == max_revenue)
+        ## look for winrate 
+        winrate = self.result_winrate_list[max_revenue_indices[0][0], max_revenue_indices[0][1], max_revenue_indices[0][2], max_revenue_indices[0][3]]
+        print("Best options found in terms of winrate:", max_revenue) ## print the best options found in terms of winrate
+        print(f"And it is using the parameters of W_buy: {self.W_buy_list[max_revenue_indices[0][0]]}, W_sell: {self.W_sell_list[max_revenue_indices[0][1]]}, target_rate: {self.target_rate_list[max_revenue_indices[0][2]]}, losing_rate: {self.losing_rate_list[max_revenue_indices[0][3]]}")
+        return_string = f"Revenue: {max_revenue},W_buy: {self.W_buy_list[max_revenue_indices[0][0]]}, W_sell: {self.W_sell_list[max_revenue_indices[0][1]]}, target_rate: {self.target_rate_list[max_revenue_indices[0][2]]}, losing_rate: {self.losing_rate_list[max_revenue_indices[0][3]]}, Win_rate: {winrate}\n"
+        # print(return_string) ## print the return string
+        return return_string ## return the string
+        # print("Best options found in terms of winrate:", max(self.result_winrate_list)) ## print the best options found in terms of winrate
+        # print(f"And it is using the parameters of {np.argwhere(self.result_revenue_list,max(self.result_winrate_list))}")
+        # print("Best options found in terms of revenue:", max(self.result_revenue_list)) ## print the best options found in terms of revenue
 
     def return_outcome(self) -> tuple:
         return self.result_revenue_list, self.result_winrate_list, self.result_number_of_trade_list
@@ -1005,48 +1028,64 @@ if __name__ == "__main__":
     #         losing_rate_list=[0.03]
     #     )
     ## preparing the document 
-    # stock_price_america = r"stock_list/nasdaqlisted.txt" ## getting the reference 
-    # list_of_america = [] ## the list of all the stock symbol in America
-    # f= open(stock_price_america,"r",encoding="utf8") ## open the file
-    # strings = f.read().split("\n") ## read the file and split by new line
-    # strings = strings[1:-1]    ## remove the first and the last element
+    stock_price_america = r"stock_list/nasdaqlisted.txt" ## getting the reference 
+    list_of_america = [] ## the list of all the stock symbol in America
+    f= open(stock_price_america,"r",encoding="utf8") ## open the file
+    strings = f.read().split("\n") ## read the file and split by new line
+    strings = strings[1:-1]    ## remove the first and the last element
 
-    # for string in strings:  ## for each string in the strings
-    #     list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
+    for string in strings:  ## for each string in the strings
+        list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
 
-    # filename = "best_option.txt" ## the file that we are going to write on
-    # with open(filename,'w') as f: ## prepare the file
-    #     f.write("Stock_ID,Best_winrate,W_buy,W_sell,target_rate,losing_rate\n") ## writing the header for the file
-    # for i in list_of_america:  ## for each stock symbol in the list of america
-    #     try:
-    #         best_option = trainer(i,
-    #                 W_buy_list=np.arange(15, 20, 0.2).tolist(),
-    #                 W_sell_list=np.arange(25, 30, 0.2).tolist(),
-    #                 target_rate_list=[0.03],
-    #                 losing_rate_list=[0.03]
-    #             ).best_option()
-    #         print(best_option)
-    #         with open(filename, "a+") as f:
-    #             # Parse best_option string robustly
-    #             parts = best_option.replace('\n', '').split(',')
-    #             winrate = parts[0].split('Winrate: ')[1]
-    #             W_buy = parts[1].split('W_buy: ')[1]
-    #             W_sell = parts[2].split('W_sell: ')[1]
-    #             target_rate = parts[3].split('target_rate: ')[1]
-    #             losing_rate = parts[4].split('losing_rate: ')[1]
-    #             f.write(f"{i},{winrate},{W_buy},{W_sell},{target_rate},{losing_rate}\n")
-    #     except IndexError:
-    #         print("Index Error for stock symbol:", i)
-    #         pass
-    #     except FileNotFoundError:
-    #         print("File Not found error for stock symbol:", i)
-    #         pass
-    #     except ZeroDivisionError:
-    #         print("Zero Division Error for stock symbol:", i)
-    #         pass
-    #     except Exception as e:
-    #         print(f"An error occurred for stock symbol {i}: {e}")
-    #         pass
+    filename1 = "generated_file/America/best_option_winrate.txt" ## the file that we are going to write on
+    filename2 = "generated_file/America/best_option_revenue.txt" ## the file that we are going to write on
+    with open(filename1,'w') as f: ## prepare the file
+        f.write("Stock_ID,Best_winrate,W_buy,W_sell,target_rate,losing_rate\n") ## writing the header for the file
+    with open(filename2,'w') as f: ## prepare the file
+        f.write("Stock_ID,Best_revenue,W_buy,W_sell,target_rate,losing_rate,Win_rate\n")
+    for i in list_of_america:  ## for each stock symbol in the list of america
+        try:
+            object = trainer(i,
+                    W_buy_list=np.arange(15, 20, 0.5).tolist(),
+                    W_sell_list=np.arange(25, 30, 0.5).tolist(),
+                    target_rate_list=np.arange(0.02, 0.05, 0.005).tolist(),
+                    losing_rate_list=np.arange(0.02, 0.05, 0.005).tolist()
+                )
+            best_option_winrate = object.best_option_winrate()  ## get the best option from the trainer class
+            best_option_revenue = object.best_option_revenue()  ## get the best option from the trainer class
+            print(best_option_winrate)
+            with open(filename1, "a+") as f:
+                # Parse best_option string robustly
+                parts = best_option_winrate.replace('\n', '').split(',')
+                winrate = parts[0].split('Winrate: ')[1]
+                W_buy = parts[1].split('W_buy: ')[1]
+                W_sell = parts[2].split('W_sell: ')[1]
+                target_rate = parts[3].split('target_rate: ')[1]
+                losing_rate = parts[4].split('losing_rate: ')[1]
+                f.write(f"{i},{winrate},{W_buy},{W_sell},{target_rate},{losing_rate}\n")
+            with open(filename2, "a+") as f:
+                # Parse best_option string robustly
+                parts = best_option_revenue.replace('\n', '').split(',')
+                revenue = parts[0].split('Revenue: ')[1]
+                W_buy = parts[1].split('W_buy: ')[1]
+                W_sell = parts[2].split('W_sell: ')[1]
+                target_rate = parts[3].split('target_rate: ')[1]
+                losing_rate = parts[4].split('losing_rate: ')[1]
+                reswinrate = parts[5].split('Win_rate: ')[1]
+                f.write(f"{i},{revenue},{W_buy},{W_sell},{target_rate},{losing_rate},{reswinrate}\n")
+        except IndexError:
+            print("Index Error for stock symbol:", i)
+            pass
+        except FileNotFoundError:
+            print("File Not found error for stock symbol:", i)
+            pass
+        except ZeroDivisionError:
+            print("Zero Division Error for stock symbol:", i)
+            pass
+        except Exception as e:
+            print(f"An error occurred for stock symbol {i}: {e}")
+            pass
+
 
 
             
