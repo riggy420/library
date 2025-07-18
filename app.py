@@ -1,5 +1,5 @@
-from .risk_assessment_library import risk_assessment_library
-from .document import document
+from risk_assessment_library import risk_assessment_library as ra
+from document import document
 from flask import Flask,render_template,request,flash,session,redirect
 import time 
 import os
@@ -14,7 +14,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
 from flask import Flask,render_template,request,flash,session,redirect
-import library
 import time 
 import os
 import psutil 
@@ -23,9 +22,6 @@ import pandas as pd
 import random
 import subprocess 
 from subprocess import Popen
-
-from risk_assessment_library_for_new_database import using_risk_assessment as ra
-from risk_assessment_library_for_new_database import risk_assessment as database
 
 app = Flask(__name__)   # Flask constructor 
 app.secret_key="rtdyitfrt"
@@ -97,19 +93,19 @@ def making_data(filename):
             # if existing_record:
             #     pass
             if db.session.query(User).filter_by(stockid='stockid').count() < 1:
-                stockid,agpd_value,current_price,number_of_trade,w_buy,w_sell,day_last_update,average_day,day_standard_deviation,W_moderate_diff,five_day_average,day_has_been,average_volume = line.strip().split(' ')
+                stockid,agpd_value,current_price,number_of_trade,w_buy,w_sell,day_last_update,average_day,day_standard_deviation,W_moderate_diff,five_day_average,day_has_been,average_volume = line.strip().split(',')
                 user = User(
                     stockid=stockid, 
-                    agpd_value=round(float(agpd_value),-4), 
-                    current_price=round(float(current_price),-2), 
+                    agpd_value=round(float(agpd_value),4), 
+                    current_price=round(float(current_price),4), 
                     number_of_trade=int(number_of_trade), 
-                    w_buy=round(float(w_buy),-2), 
-                    w_sell=round(float(w_sell),-2), 
+                    w_buy=round(float(w_buy),2), 
+                    w_sell=round(float(w_sell),2), 
                     day_last_update=day_last_update, 
-                    average_day=round(float(average_day),-2), 
-                    day_standard_deviation=round(float(day_standard_deviation),-2), 
-                    W_moderate_diff=round(float(W_moderate_diff),-2), 
-                    five_day_average=round(float(five_day_average),-2),
+                    average_day=round(float(average_day),2), 
+                    day_standard_deviation=round(float(day_standard_deviation),2), 
+                    W_moderate_diff=round(float(W_moderate_diff),2), 
+                    five_day_average=round(float(five_day_average),2),
                     day_has_been=float(day_has_been),
                     average_volume=round(float(average_volume),2),
                     )
@@ -150,7 +146,7 @@ def data():
         if col_index is None:
             break
         col_name = request.args.get(f'columns[{col_index}][data]')
-        if col_name not in ['stockid', 'agpd_value','number_of_trade','w_buy','w_sell']:
+        if col_name not in ['stockid', 'agpd_value','number_of_trade','w_buy','w_sell','average_volume']:
             col_name = 'stockid'
         descending = request.args.get(f'order[{i}][dir]') == 'desc'
         col = getattr(User, col_name)
@@ -177,7 +173,7 @@ def data():
 ## front page
 @app.route('/', methods=['POST', 'GET'])
 def index():
-    data = pd.ExcelFile("W:\Trading\stock_board_industry_name_em.xlsx").parse()
+    data = pd.ExcelFile("stock_list/stock_industry_list.xlsx").parse()
     industry=data['板块名称']
     industry.loc[0]='None'
 
@@ -200,15 +196,13 @@ def result():
     commands = [] 
 
     if request.method == 'POST':
-        a = ra()
-
-
+        a = document()
         if request.form['btn'] == 'Update_America':    
             if str(ra.getting_latest_date(a,'AAPL','')) != time.strftime("%Y-%m-%d"):
                 print("Updating America")
                 # flash('Updating America. Please wait for a while')
 
-                commands.append(["python", os.path.expanduser("W:\\Trading\\website-main\\website-main\\databasecreator.america.py")])
+                commands.append(["python3", "scrapper.py America"])
                 print("Here")   
                 print(commands)
                 # return redirect(request.url)
@@ -230,7 +224,7 @@ def result():
                 db.drop_all()
                 db.create_all()
                 try:
-                    making_data("generated_file/agpd_america_{}_all_0.001.txt".format(current_datetime))
+                    making_data("generated_file/America/agpd_america_{}_all_0.001.txt".format(current_datetime))
                 except FileNotFoundError:
                     print("Struck")
                     subprocess.run(["python", os.path.expanduser("W:\Trading\website-main\website-main\checking_for_america.py")])

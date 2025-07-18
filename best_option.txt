@@ -1,0 +1,2 @@
+Stock_ID,Best_winrate,W_buy,W_sell,target_rate,losing_rate
+AAL,0.7058823529411765,16.999999999999993,25.0,0.02,0.03

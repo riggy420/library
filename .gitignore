@@ -1,0 +1,8 @@
+## Ignore Python cache files
+__pycache__/
+stock_data
+yfinance.cache
+generated_file/
+control_experiment.py
+webpage/
+rain_dumb.py

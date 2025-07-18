@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block head %}
+        <title>LDR is gay</title>
+        <link rel="stylesheet" type="text/css" href="/static/result.css">
+        {% endblock head %}
+
+{% block body %}
+
+<h1> Here is the search_result for :</h1>
+
+<div class = "result" >
+{% for key, value in context.items() %}
+    <h1 class="temp_result">{{key}} : {{context[key]}}</h1>
+{% endfor %}
+</div>
+
+<form method="post" action="{{ url_for('index') }}">
+<button type="submit" name="btn" value="return">Return</button>
+</form>
+<!-- 
+{%for i in range(0, len)%} 
+  
+    <li>{{context[i]}}</li> 
+{%endfor%}  -->
+
+
+{% endblock body %}
+ 

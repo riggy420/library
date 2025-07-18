@@ -1,6 +1,6 @@
 from weakref import ref
-from .risk_assessment_library import risk_assessment_library
-from .document import document
+from risk_assessment_library import risk_assessment_library
+from document import document
 from flask import Flask,render_template,request,flash,session,redirect
 import time 
 import os

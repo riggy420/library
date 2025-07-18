@@ -1,6 +1,9 @@
+from numpy import doc
+from psutil.tests import kernel_version
+from control_experiment import risk_assessment
+from risk_assessment_library import risk_assessment_library
 from hmac import new
 import math
-from tkinter import W
 import pandas as pd
 import csv
 import numpy as np
@@ -25,137 +28,10 @@ import requests
 import urllib.parse
 import requests 
 import urllib
-from scrapper import scrapper
+from pathlib import Path
 
-
-class risk_assessment_library:
-    '''
-    This is the main class for risk_assessment_library
-
-    From here, we are calucating the W_moderate value and w_sell value as an indicator
-
-    For the W_sell value, we are using the following equation:
-
-    W_sell = *1/2* * 0.618^{2} * min(MFI,RSI,D)+1/2 * max(MFI,RSI,D)+1/2*0.618 * median(MFI,RSI,D)
-
-    For the W_moderate value, we are using the following equation:
-
-    W_moderate = *1/2* * 0.618^{2} * max(MFI,RSI,D)+1/2 * min(MFI,RSI,D)+1/2*0.618 * median(MFI,RSI,D)
-
-    The W_sell value is used to calucate the sell signal
-    The W_moderate value is used to calucate the buy signal
-
-    Besides, the function will return the following value and stored them as a list
-    1. MFI value (list_of_MFI)
-    2. RSI value (rsi_list)
-    3. K value (list_of_k_value)
-    4. D value (list_of_d_value)
-    5. W_moderate value (W_moderate_list)
-    6. W_sell value (W_sell_list)
-    7. AGPD value (agpd)
-    8. Number of trade (number_of_trade)
-    9. Average day (average_day)
-    10. Day standard deviation (day_std_deviation)
-    11. Revenue per year (revenue_per_year)
-    12. Average volume (average_volume)
-    13. Elasped days (elasped_day)
-    14. Total cost (total_cost)
-    15. Total revenue (total_revenue)
-    16. Total elasped days (total_elasped_day)
-    17. Total cost value (total_cost_value)
-    18. Total revenue value (total_revenue_value)
-
-    Basic information of the stock is stored in the following list:
-    1. List of opening price (list_of_opening_price)
-    2. List of maximum price (list_of_maximum_price)
-    3. List of minimum price (list_of_minimum_price)
-    4. List of volume of exchange (list_of_volume_of_exchange)
-    5. List of date (list_of_date)
-    6. List of ending price (list_of_ending_price)
-    7. List of rate of change (list_of_rate_of_change)
-    8. List of volume of exchange hand (list_of_volume_of_exchange_hand)
-    9. List of rate of change in float (list_of_rate_of_change_in_float)
-    10. List of volume exceed (list_of_volume_exceed)   
-
-    With that said, it should return the object with everything installed:
-
-    For example, how we can call the object:
-
-    .. highlight:: python
-    .. code-block:: python
-        from risk_assessment_library import risk_assessment_library
-        r = risk_assessment_library("AAPL")
-        print(r.W_moderate_list)
-    '''
-    list_of_opening_price = np.array([],dtype=np.float64) ## initial value for list of opening price
-    list_of_maximum_price = np.array([],dtype=np.float64) ## initial value for list of maximum price
-    list_of_minimum_price = np.array([],dtype=np.float64) ## initial value for list of minimum price
-    list_of_volume_of_exchange = np.array([],dtype=np.float64) ## initial value for list of volume of exchange
-    alpha = 2/15 ## the mutiplier for ema values 
-    ema_value = 30 ## initial value for ema
-    price = 0 ## initial value for price
-    date = 0 ## initial value for date
-    date_14 = 0 ## initial value for date_14
-    k_value = 50 ## initial value for k value
-    list_of_date = np.array([]) ## initial value for list of date
-    list_of_ending_price = np.array([],dtype=np.float64) ## initial value for list of ending price
-    list_of_rsv = np.array([],dtype=np.float64) ## initial value for list of rsv
-    list_of_k_value = np.array([],dtype=np.float64) ## initial value for list of k value
-    list_of_d_value = np.array([],dtype=np.float64) ## initial value for list of d value
-    d_value = 50 ## initial value for d value
-    list_of_MFI = np.array([]) ## initial value for list of MFI
-    sum_of_positive_ema_value = 0 
-    sum_of_negative_ema_value = 0
-    list_of_volume_exceed = np.array([],dtype=np.float64) ## initial value for list of volume exceed
-    list_of_rate_of_change = np.array([],dtype=np.float64) ## initial value for list of volume
-    list_after_editing = np.array([],dtype=np.float64) ## initial value for list after editing
-    list_of_volume_of_exchange_hand = np.array([],dtype=np.float64) ## initial value for list of volume of exchange hand
-    list_of_rate_of_change_in_float = np.array([],dtype=np.float64) ## initial value for list of rate of change in float
-    up = np.array([],dtype=np.float64) ## initial value for up
-    down = np.array([],dtype=np.float64) ## initial value for down
-    ema_list = np.array([],dtype=np.float64) ## initial value for ema list
-    ema_up = 0
-    ema_down = 0
-    rsi_list = np.array([],dtype=np.float64) ## initial value for rsi list
-    W_list = np.array([],dtype=np.float64) ## initial value for W list
-    W_value = 0
-    a = 0 
-    mfr = 0
-    comparing_date_purchase = np.array([],dtype=np.float64) #: the indices of the purchase date in the list of_date to comparing date purchase
-    comparing_date_sell_off = np.array([],dtype=np.float64) #: the indices of the date that we ought to sell off to the comparing date sell off
-    strings = np.array([],dtype=np.float64) ## initial value for strings
-    x =0
-    actual_purchase = np.array([],dtype=np.float64) ## initial value for actual purchase
-    actual_sell_off = np.array([],dtype=np.float64) ## initial value for actual sell off
-    removal = 0 
-    actual_actual_purchase = np.array([],dtype=np.float64) ## initial value for actual actual purchase
-    total_cost = np.array([],dtype=np.float64) ## initial value for total cost
-    total_revenue =np.array([],dtype=np.float64) ## initial value for total revenue
-    elasped_day = np.array([],dtype=np.float64) ## initial value for elasped day
-    number_of_trade = 0
-    total_cost_value= 0
-    total_revenue_value =0
-    total_elasped_day= 0 
-    ag = 0
-    agpd=0
-    revenue_per_year = 0
-    average_volume = 0
-    buy_at_ending_price = np.array([],dtype=np.float64) ## initial value for buy at ending price
-    sell_at_ending_price =np.array([],dtype=np.float64) ## initial value for sell at ending price
-    current_price =0 
-    current_price_list = np.array([],dtype=np.float64) ## initial value for current price list
-    list_of_reflection = np.array([],dtype=np.float64) ## initial value for list of reflection
-    W_moderate_list_within_class=np.array([],dtype=np.float64) ## initial value for W moderate list within class
-    elasped_day_list = np.array([],dtype=np.float64) ## initial value for elasped day list
-    W_sell_list_within_class = np.array([],dtype=np.float64) ## initial value for W sell list within class
-    winrate = 0 ## initial value for winrate
-    average_day = 0 ## initial value for average day
-    absolut_trade_winrate = 0
-    draw_win_winrate = 0
-    draw_lose_winrate = 0
-    lose_winrate = 0 
-
-    def __init__(self, name,area="",W_buy=17, W_sell=26,target_rate = 0.03, losing_rate = 0.03,replying_on_past_record = True,scapper_on_or_off = True):
+class try_out(risk_assessment_library):
+    def __init__(self, stock_symbol,area="",W_buy=17, W_sell=26,target_rate = 0.03, losing_rate = 0.03):
         '''
         This is the initialisation of risk_assessment_library
         
@@ -169,10 +45,17 @@ class risk_assessment_library:
         Returns:
         ----------
         The finihsed object that we have finished loading the data
-        '''
+        ''' 
+
+        # try:
+        #     Path()
+
+        ## retrieve the past record of the data to reduce time: 
+        
+    
         self.close() ### clearing the file first => Idk why can have error if you are spamming it for too long time
-        self.name=name ## idetnifier for the object
-        self.stock_symbol = name ## identifier for the stock symbol
+        self.name=stock_symbol ## idetnifier for the object
+        self.stock_symbol = stock_symbol ## identifier for the stock symbol
         self.W_buy = W_buy ## the W_buy value
         self.W_sell = W_sell ## the W_sell value
         self.target_rate = target_rate ## the target rate for the stock
@@ -189,15 +72,11 @@ class risk_assessment_library:
             else:
                 self.area= "America"
                 stock_price_database = r"stock_data/America/{}.txt".format(self.name)
-        
-        ## Update the data if the scrapper is on
-        if scapper_on_or_off:
-            scrapper(self.area,spectific_id=self.name) ## call the scrapper to get the data
 
         past_record = "generated_file/America/stock_data/{}.txt".format(self.name) ## the past record of the data
-        if os.path.exists(past_record) and replying_on_past_record: ## if the past record exists and what if the record is empty tho? 
+        if os.path.exists(past_record): ## if the past record exists and what if the record is empty tho? 
             self.getting_the_list_from_the_file(past_record)
-            self.orginal_length = len(self.list_of_date) ## getting the orginal length of the list of date
+
             ## Check if the past record is up to date or not 
             import pandas as pd
             from pandas.tseries.holiday import USFederalHolidayCalendar
@@ -210,104 +89,12 @@ class risk_assessment_library:
             last_date = str(self.list_of_date[-1])
             print("Current date: ", current_datetime)
             print("Last date in the past record: ", last_date)
-            last_date_copy  = last_date ## copy the last date
-            # last_date = last_date+" 00:00:00-04:00" ## the format is kind of wrong => May need to go back to the scrapper to revert the changes
 
 
             if truth_last_day.strftime("%Y-%m-%d") != last_date :
                 ## need to update
                 print("The past record is not up to date, need to update the data and use the scrapper and should be able to call for the indivudal one")
-                ## Just cat the pandas dataframe la 
 
-                ## findig the index of the last date in the list of date
-                # index_of_last_date = np.where(self.list_of_date == last_date)[0][0] ## finding the index of the last date in the list of date
-                ## getting the last date in the orginal database
-                table_of_database = pd.read_table(stock_price_database,sep=",",lineterminator="\n",names=['Date','Close','High','Low','Open','Volume']) ## getting the last date in the orginal database
-                ## finding the index of the so called last date in the current database 
-                # print(table_of_database['Date'])
-
-                ## Problem => Not reading the new data
-
-                print(last_date)
-                index = np.where(table_of_database['Date'] == last_date)[0][0] ## finding the index of the last date in the current database
-                # print("Index of the last date in the current database: ", index)
-                # print(table_of_database['Date'])
-
-                ## go checking in the original database 
-                stock_price_database = r"stock_data/America/{}.txt".format(self.name) ## the stock price database
-                ## getting the data from the original database
-                stock_price_database_1 = pd.read_table(stock_price_database,sep=",",lineterminator="\n",names=['Date','Close','High','Low','Open','Volume']) ## getting the data from the original database
-                # print("Last date in the original database: ", stock_price_database_1['Date'].iloc[-1]) ## getting the last date in the original database
-                # print("Last date in the original database: ", np.where(stock_price_database_1['Date']==last_date)[0][0]) ## finding the index of the last date in the original database
-                # print(self.list_of_ending_price.shape)
-                
-
-                ### we are concating two big chunk of data together as we didn't differentiate the data from the past record and the new data
-                self.split_string(stock_price_database,start_date=last_date_copy) ## split the string and get the data from the original database
-                
-                ## running the standard procedure
-                self.get_date() ## getting the date 
-                self.RSV(index)  ## getting the rsv list
-                print(self.list_of_rsv)
-                # print("Length of date list: ", len(self.list_of_date)) ## print the length of date list
-                self.rsi_list = self.ema(index) ##  running through ema function to get the rsi function 
-                # for i in range(1230,len(self.rsi_list)): ## Appear some duplicate value 
-                #     print("i: ",i," RSI value: ",self.rsi_list[i])
-                # print("Length of rsi list: ", len(self.rsi_list))
-                # print("Length of rsv list: ", len(self.list_of_rsv))
-                
-                self.K(index)  ## running the k forumla
-                self.d_list = self.D(index) ## running the d forumla ## didn;t appear for some reason
-                # for i in range(1230,len(self.d_list)):
-                #     print("i: ",i," D value: ",self.d_list[i])
-                # print("Length of ending_price list: ", len(self.list_of_ending_price))
-                # print("Length of MFI list: ", len(self.list_of_MFI))
-                # print(self.list_of_MFI)
-                self.list_of_MFI = self.MFI_list1(index) ## running MFI list as well
-                # print("Afterward:",self.list_of_MFI.shape)
-                # for i in range(1230,len(self.list_of_MFI)): ## more then antipicated 
-                #     print("i: ",i," MFI value: ",self.list_of_MFI[i])
-                self.W_moderate_list = np.append(self.W_moderate_list,self.W_moderate(self.W_buy,self.W_sell,index)[0]) ## combining and running thr W moderate forumla
-                self.W_sell_list = np.append(self.W_sell_list,self.W_moderate(self.W_buy,self.W_sell,index)[1]) ## combining and running thr W sell forumla
-
-
-                # print("Length of W_moderate_list: ", len(self.W_moderate_list)) ## print the length of W_moderate_list
-                # print("Length of W_sell_list: ", len(self.W_sell_list)) ## print the length of W_sell_list
-                # print("Length of list_of_ending_price: ", len(self.list_of_ending_price)) ## print the length of list_of_ending_price
-                # print ("Length of list_of_date: ", len(self.list_of_date)) ## print the length of list_of_date
-                # print("Length of list_of_MFI: ", len(self.list_of_MFI)) ## print the length of list_of_MFI
-                # for i in range(1230,len(self.W_moderate_list)):
-                #     print("i: ",i," W_moderate value: ",self.W_moderate_list[i])
-                self.a=13
-
-                ## Need to rewrite the entire document  // should be using dataframe to handle it? like pandas dataframe
-                with open(past_record, "w") as f: ## append the data to the past record
-                    f.write("Date,Opening_Price,Closing_Price,Maximum_Price,Minimum_Price,Volume_of_Exchange,MFI,RSI,K,D,W_moderate,W_sell\n") ## writing the header for the file
-
-                with open(past_record, "a+") as f:
-                    for i in range(len(self.list_of_opening_price)):
-                        f.write(f"{self.list_of_date[i]},{self.list_of_opening_price[i]},{self.list_of_ending_price[i]},{self.list_of_maximum_price[i]},{self.list_of_minimum_price[i]},{self.list_of_volume_of_exchange[i]},{round(self.list_of_MFI[i],2)},{round(self.rsi_list[i],2)},{round(self.list_of_k_value[i],2)},{round(self.list_of_d_value[i],2)},{round(self.W_moderate_list[i],2)},{round(self.W_sell_list[i],2)}\n")
-                with open(past_record, "a+") as f: ## append the data to the past record
-                    f.write("Ema_up,Ema_down") ## writing the header for the file
-                    f.write(f",{self.ema_up},{self.ema_down}\n") ## writing the ema_up and ema_down value
-
-                print(f"Data for {self.stock_symbol} has been updated in {past_record}") ## print the data has been updated
-                # self.W_moderate_list,self.W_sell_list = self.W_moderate(self.W_buy,self.W_sell,index) ## combining and running thr W moderate forumla 
-                # print(self.W_moderate_list_within_class)
-                # for i in range(1230,len(self.W_moderate_list)):
-                    # print("i: ",i," W_moderate value: ",self.W_moderate_list[i])
-                ## need to split string first => for other stuff
-                # self.split_string(stock_price_database) ## split the string first and getting all the data
-                ## rerun the previous algorithm to get the data
-                ## think of the number of iteration, may be better if i just use the index to help with the iteration 
-                ## for example, just do something like 
-                # for i in range(index_of_last_date+1,len(self.list_of_date)):
-                ## but first we need to track down the last date's index 
-
-
-                ## making the data in similar format to the table_of_database ## Assume the past data_doesn't exist  
-
-                ## need to check with the data inside to see if it is up to date or not and calucate the resultant missing day or something
                 ## I am thinking about calling the scrapper automatically 
             else:
                 print("Can use the past record")
@@ -325,10 +112,14 @@ class risk_assessment_library:
         
         else: ## if the past record does not exist
             
+            f=open(stock_price_database,'r',encoding="utf8") ### opening the files 
+            self.strings = f.read().split("\n") ## reading the individual content of the file
+            self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
+            
             if self.area == "industry": ## since we are using akshare => that is their ways of doing it
-                num_of_data = self.split_string_for_industry(stock_price_database)
+                num_of_data = self.split_string_for_industry()
             else:
-                num_of_data = self.split_string(stock_price_database)
+                num_of_data = self.split_string()
                 # print(self.list_of_date) ## print the first string to see if it is correct or not
 
             if num_of_data == 10: ## filter the stocks with not enough data
@@ -336,8 +127,6 @@ class risk_assessment_library:
                 raise Exception("Not enough data")
         
             self.get_date() ## getting the date 
-            # print("I am here")
-
             self.RSV()  ## getting the rsv list
             self.rsi_list = self.ema() ##  running through ema function to get the rsi function 
             self.K()  ## running the k forumla
@@ -350,405 +139,15 @@ class risk_assessment_library:
         self.average_volume = np.mean(self.list_of_volume_of_exchange)*self.list_of_ending_price[-1]  ## calucating the average of all
         # self.close()
 
-    def processing_data(self,filename):
-        f=open(filename,'r',encoding="utf8") ### opening the files 
-        self.strings = f.read().split("\n") ## reading the individual content of the file
-        self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
-        
-        if self.area == "industry": ## since we are using akshare => that is their ways of doing it
-            num_of_data = self.split_string_for_industry(filename)
-        else:
-            num_of_data = self.split_string(filename)
-            # print(self.list_of_date) ## print the first string to see if it is correct or not
 
-        if num_of_data == 10: ## filter the stocks with not enough data
-            self.agpd = -100
-            raise Exception("Not enough data")
-    
-        self.get_date() ## getting the date 
-        self.RSV()  ## getting the rsv list
-        self.rsi_list = self.ema() ##  running through ema function to get the rsi function 
-        self.K()  ## running the k forumla
-        self.d_list = self.D() ## running the d forumla
-        self.MFI_list = self.MFI_list1() ## running MFI list as well
-        self.W_moderate_list,self.W_sell_list = self.W_moderate(self.W_buy,self.W_sell) ## combining and running thr W moderate forumla 
-        # print(self.W_moderate_list_within_class)
+    def print_info(self):
+        print(f"Stock Symbol: {self.stock_symbol}")
+        print(f"AGPD: {self.agpd}")
+        print(f"Number of Trades: {self.number_of_trade}")
+        print(f"Ending Price: {self.list_of_ending_price[-1]}")
+        print(f"W Moderate List: {self.W_moderate_list}")
 
-    def getting_the_list_from_the_file(self,filename):
-        '''
-        This is the function that we use to get the list from the file
-
-        -----------
-        Parameters(Inputs):
-        -----------
-        * filename `(str)`: the name of the file that we want to read
-
-        -----------
-        Returns:
-        -----------
-        nothing but prepre all the list
-        '''
-
-        with open(filename, 'r', encoding='utf8') as f:  ## open the file
-            strings = f.read().split("\n")  ## read the file and split by new line
-
-            strings = strings[1:-1]  ## remove the first and the last element
-            for string in strings:
-                # print(string)
-                if string[:15] == "Ema_up,Ema_down": ## if the string is ema_up,ema_down
-                    string12 = string.split(",") ## split the string by comma
-                    # print(string12)
-                    self.ema_up = float(string12[2]) ## get the ema_up value
-                    self.ema_down = float(string12[3]) ## get the ema_down value
-                    continue
-                string= string.split(",",12)
-                
-                ### append the value to the list
-                self.list_of_date = np.append(self.list_of_date,string[0])
-                self.list_of_opening_price = np.append(self.list_of_opening_price,float(string[1]))
-                self.list_of_ending_price = np.append(self.list_of_ending_price,float(string[2]))
-                self.list_of_maximum_price = np.append(self.list_of_maximum_price,float(string[3]))
-                self.list_of_minimum_price = np.append(self.list_of_minimum_price,float(string[4]))
-                self.list_of_volume_of_exchange = np.append(self.list_of_volume_of_exchange,float(string[5]))
-                self.list_of_MFI = np.append(self.list_of_MFI,float(string[6]))
-                self.rsi_list = np.append(self.rsi_list,float(string[7]))
-                self.list_of_k_value = np.append(self.list_of_k_value,float(string[8]))
-                self.list_of_d_value = np.append(self.list_of_d_value,float(string[9]))
-                self.W_moderate_list = np.append(self.W_moderate_list,float(string[10]))
-                self.W_sell_list = np.append(self.W_sell_list,float(string[11]))
-            
-    def split_string(self,stock_price_database,start_date=None):
-        '''
-        This is the function that we use to split the string
-        No need for the input or output
-        '''
-        f=open(stock_price_database,'r',encoding="utf8") ### opening the files 
-        self.strings = f.read().split("\n") ## reading the individual content of the file
-        if start_date is not None: ## if the start date is not None
-            self.strings = self.strings[1:-1] ## remove the first element if the start date is not None
-        else:
-            self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
-        wait = False ## initial value for wait
-        if start_date is not None: ## if the start date is not None
-            wait = True
-            ema_Collecting= True
-
-        for string in self.strings:
-            string = string.replace('"','')
-            string12 = string.split(",", 5)
-            # print(string12)
-            string12[0]=string12[0][:10]
-
-
-            if wait == True: ## if we are waiting for the start date
-                if string12[0] == start_date:
-                    wait = False
-                    
-            else:
-                self.list_of_date=np.append(self.list_of_date,string12[0])
-                self.list_of_ending_price=np.append(self.list_of_ending_price,float(string12[1]))
-                self.list_of_opening_price=np.append(self.list_of_opening_price,float(string12[4]))
-                self.list_of_maximum_price=np.append(self.list_of_maximum_price,float(string12[2]))
-                self.list_of_minimum_price=np.append(self.list_of_minimum_price,float(string12[3]))
-                self.list_of_volume_of_exchange=np.append(self.list_of_volume_of_exchange,float(string12[5]))
-            
-        if (len(self.list_of_date)<28):
-            return 10
-        else: 
-            return 1
-        
-    def split_string_for_industry(self,stock_price_database):
-        '''
-        This is the function that we use to split the string
-        No need for the input or output
-        It is spectifically for the indistry
-        '''
-        f=open(stock_price_database,'r',encoding="utf8") ### opening the files 
-        self.strings = f.read().split("\n") ## reading the individual content of the file
-        self.strings = self.strings[:-1] ## remove the last white space => sometimes it will hinder the understanding
-        
-
-        for ind in self.data.index:
-            self.list_of_date=np.append(self.list_of_date,self.data['日期'][ind])
-            self.list_of_ending_price=np.append(self.list_of_ending_price,self.data['收盘'][ind])
-            self.list_of_opening_price=np.append(self.list_of_opening_price,self.data['开盘'][ind])
-            self.list_of_maximum_price=np.append(self.list_of_maximum_price,self.data['最高'][ind])
-            self.list_of_minimum_price=np.append(self.list_of_minimum_price,self.data['最低'][ind])
-            self.list_of_volume_of_exchange=np.append(self.list_of_volume_of_exchange,self.data['成交量'][ind])
-            self.list_of_rate_of_change=np.append(self.list_of_rate_of_change,self.data['涨跌幅'][ind])
-            self.list_of_volume_of_exchange=np.append(self.list_of_volume_of_exchange_hand,self.data['成交额'][ind])
-
-        if (len(self.list_of_date)<28):
-            return 10
-        else:
-            return 1
-        
-    def reverse(self):
-        '''
-        This is the function that we use to reverse the list
-        '''
-        self.list_of_date = np.flip(self.list_of_date)
-        self.list_of_ending_price = np.flip(self.list_of_ending_price)
-        self.list_of_opening_price = np.flip(self.list_of_opening_price)
-        self.list_of_maximum_price = np.flip(self.list_of_maximum_price)
-        self.list_of_minimum_price = np.flip(self.list_of_minimum_price)
-        self.list_of_volume_of_exchange = np.flip(self.list_of_volume_of_exchange)
-        self.list_of_rate_of_change = np.flip(self.list_of_rate_of_change)
-        self.list_of_volume_of_exchange_hand = np.flip(self.list_of_volume_of_exchange_hand)
-    
-    def get_date(self):
-        '''
-        This is the function that we use to get the date or reset the mutiplier for self.list_of_date and the W_moderate value
-        '''
-        self.x=self.a=13
-
-    def MFI(self):
-        '''
-        This is the function that we use to calculate the MFI value
-
-        Parameters(Inputs):
-        ----------
-        self => in fact, we will start from the beginning of the list (of closing price)
-
-        Returns:
-        ----------
-        MFI_value `(float)`: the value of the MFI for 14 days
-        '''
-        money_positve_flow = np.array([]) ## making the array for calucating the money positive flow
-        money_negative_flow = np.array([]) ## making the array for calucating the money negative flow
-
-        for i in range(14):
-            max_value = self.list_of_maximum_price[i+self.x-13]
-            min_value = self.list_of_minimum_price[i+self.x-13]
-
-            if (self.list_of_ending_price[i+self.x-13] > self.list_of_ending_price[i+self.x-14]):
-                typical_price = (max_value+min_value+self.list_of_ending_price[i+self.x-13])/3
-                # print("typical price : ",typical_price)
-                raw_money = typical_price*self.list_of_volume_of_exchange[i+self.x-13]
-                money_positve_flow = np.append(money_positve_flow,raw_money)
-                # print("money positive flow : ",money_positve_flow)
-            else:
-                typical_price = (max_value+min_value+self.list_of_ending_price[i+self.x-13])/3
-                raw_money = typical_price*self.list_of_volume_of_exchange[i+self.x-13]
-                money_negative_flow = np.append(money_negative_flow,raw_money)
-                # print("money negative flow : ",money_negative_flow)
-
-        total_postive_flow = np.sum(money_positve_flow)
-        total_negative_flow = np.sum(money_negative_flow)
-
-        if total_negative_flow == 0:
-            mfr = 1000000000000
-        else:
-            mfr = total_postive_flow/total_negative_flow
-            # print(mfr)
-
-        MFI_value = 100*(1-1/(1+mfr))
-        return MFI_value
-    
-    def MFI_list1(self,index=0):
-        '''
-        This is the function that we use to calculate the MFI value and turn it into a list rather than a value
-
-        Parameters(Inputs):
-        ----------
-        self
-
-        Returns:
-        ----------
-        MFI_value `(lsist[float])`: the list of MFI value
-        '''
-        # self.x = self.x+index ## set the index to the current index
-        if index != 0:
-            self.x = index-13 -1 
-            index -= 26 +1
-            print("Index:", index)
-            print("self.x value:", self.x)
-        else:
-            self.x= index+13
-            
-        for i in range(index,len(self.list_of_ending_price)-13):
-            y = self.MFI()
-            self.list_of_MFI=np.append(self.list_of_MFI,y)
-            self.x+=1
-            # print(self.x)
-
-        return self.list_of_MFI
-    
-    def ema(self,index = 0):
-        '''
-        This is the function that we use to calculate the ema value
-
-        Parameters(Inputs):
-        ----------
-        self
-
-        Returns:
-        ----------
-        rsi `(list[float])`: the value of the rsi
-        '''
-        if index != 0:
-            index -= 15 ## set the index to the current index
-        for i in range(index+1,len(self.list_of_ending_price)):
-            if (self.list_of_ending_price[i-1]>self.list_of_ending_price[i+1-1]):
-                self.down = np.append(self.down,np.array([self.list_of_ending_price[i-1] - self.list_of_ending_price[i+1-1]]))
-                # self.down +=[self.list_of_ending_price[i-1] - self.list_of_ending_price[i+1-1] ] # need to minus 1 for some reason
-                self.up = np.append(self.up,0)
-            elif (self.list_of_ending_price[i-1]<self.list_of_ending_price[i+1-1]):
-                self.up=np.append(self.up,np.array([self.list_of_ending_price[i+1-1] - self.list_of_ending_price[i-1]]))
-                # self.up += [self.list_of_ending_price[i+1-1] - self.list_of_ending_price[i-1]]
-                self.down = np.append(self.down,0)
-            else:
-                self.up=np.append(self.up,0)
-                self.down=np.append(self.down,0)
-
-        if index == 0:
-            ema_up = 0
-            ema_down = 0
-            sum_ema_up_list = np.array([],dtype=np.float32)
-            sum_ema_down_list = np.array([],dtype=np.float32)
-
-            for i in range(14):
-                ema_up += self.up[i]*(1-self.alpha) ** (i)
-                sum_ema_up_list=np.append(sum_ema_up_list,ema_up)
-                ema_down += self.down[i]*(1-self.alpha) ** (i)
-                sum_ema_down_list=np.append(sum_ema_down_list,ema_down)
-
-            ema_up = ema_up/14
-            ema_down = ema_down/14
-
-        # print(len(self.up))
-
-        if index == 0:
-            for i in range(len(self.up)-self.x-1):
-                ema_up = self.alpha*self.up[self.x+i+1] +(1-self.alpha)*ema_up  #orginally i+12
-                ema_down = self.alpha*self.down[self.x+i+1] +(1-self.alpha)*ema_down
-
-                if ema_down == 0:
-                    ema_down = 1/10000
-                    rs = ema_up/ema_down
-                else:
-                    rs = ema_up/ema_down
-
-                rsi = (1-(1/(1+rs)))*100
-                self.rsi_list=np.append(self.rsi_list,rsi)
-
-        else:
-            ema_up = self.ema_up
-            ema_down = self.ema_down
-
-            ## need to print out more ema_up and ema_down value 
-            for i in range(len(self.up)):
-                ema_up = self.alpha*self.up[i] +(1-self.alpha)*ema_up
-                ema_down = self.alpha*self.down[i] +(1-self.alpha)*ema_down
-
-                if ema_down == 0:
-                    ema_down = 1/10000
-                    rs = ema_up/ema_down
-                else:
-                    rs = ema_up/ema_down
-                rsi = (1-(1/(1+rs)))*100
-                self.rsi_list=np.append(self.rsi_list,rsi)
-            
-        self.ema_up = ema_up
-        self.ema_down = ema_down
-
-        return self.rsi_list ## return the rsi list, so we can use it later on for the W_moderate function
-    
-    def RSV(self,index=0):
-        '''
-        This is the function that we use to calculate the RSV value
-
-        Parameters(Inputs):
-        ----------
-        self
-
-        Returns:
-        ----------
-        list_of_rsv `(list[float])`: the value of the rsv
-        '''
-        if index != 0: ## if the index is not 0, we need to set the index to the current index
-            index -= 14 ## set the index to the current index
-        else:
-            index = 13
-            
-        for i in range(index,len(self.list_of_date)):
-            max_value = np.max(self.list_of_maximum_price[i-13:i+1]) ## finding the max values
-            min_value = np.min(self.list_of_minimum_price[i-13:i+1]) ## finding the min values
-            value = self.list_of_ending_price[i] ## getting the price of the day
-
-            if (max_value-min_value) == 0: ## in case if something is wrong
-                self.list_of_rsv= np.append(self.list_of_rsv,-10000000000)
-            else:
-                self.list_of_rsv= np.append(self.list_of_rsv,(value-min_value)/(max_value-min_value)*100) ## calculating the rsv value
-        
-        return self.list_of_rsv ## return the entire list
-    
-    def K(self,index=0):
-        '''
-        This is the function that we use to calculate the K value
-
-        Parameters:self
-
-        Returns:
-        list_of_k_value `(list[float])`: the value of the k value
-        '''
-        if index != 0: ## if the index is not 0, we need to set the index to the current index
-            self.k_value = self.list_of_k_value[-1]
-        for i in range(len(self.list_of_rsv)):
-            self.k_value *=2/3  ## applying the forumla
-            self.k_value += self.list_of_rsv[i]/3 ## continue to do so
-            self.list_of_k_value=np.append(self.list_of_k_value,self.k_value) ## append the value to the list
-
-    def D(self,index=0):
-        r'''
-        This is the function that we use to calculate the D value
-        so the equationis is as follows:
-
-        D_{i} = 2/3 * D_{i-1} + 1/3 * K_{i}
-
-        Parameters(Inputs):
-        ----------
-
-        self
-
-        Returns:
-        ----------
-        list_of_d_value `(list[float])`: the value of the d value
-        '''
-        if index != 0: ## if the index is not 0, we need to set the index to the current index
-            self.d_value = self.list_of_d_value[-1] ## set the d_value to the last value in the list
-            index-=14
-            # print("index: ", index)
-            # print("List of k value: ", self.list_of_k_value.size)
-        for i in range(index,len(self.list_of_k_value)):
-            self.d_value *=2/3 ## applying the forumla
-            self.d_value += self.list_of_k_value[i]/3 ## continue to do so
-            self.list_of_d_value=np.append(self.list_of_d_value,self.d_value) ## append the value to the list
-        
-        return self.list_of_d_value ## return the entire list
-    
-    def W(self):
-        '''
-        This is the function that we use to calculate the W value and return it as a list
-
-        Equation:
-        W_{i} = (MFI_{i}+RSI_{i}+D_{i+3})/3
-
-        Parameters:
-        -----------
-        self (so like it is dependent on the list of MFI, RSI, and D value) cannot work without the previous function
-
-        Returns:
-        -----------
-        W_list `(list[float])`: the value of the W value
-        '''
-        for i in range(len(self.list_of_ending_price)-14-self.a-14-14):
-            W_value = (self.list_of_MFI[i]+self.rsi_list[i]+self.list_of_d_value[i+3])/3
-            self.W_list = np.append(self.W_list,W_value)
-
-        return self.W_list
-
-    def W_moderate(self, W_buy_trade, W_sell_trade,index=0): 
+    def W_moderate(self, W_buy_trade, W_sell_trade): 
         '''
         This is the function that we use to calculate the W_moderate value and return it as a list
 
@@ -768,35 +167,17 @@ class risk_assessment_library:
         '''
         W_moderate_list = np.array([]) ## initial value for W moderate list
         W_sell_list = np.array([]) ## initial value for W sell list
-        if index != 0: ## if the index is not 0, we need to set the index to the current index
-            index -= 14 ## set the index to the current index
-            self.a=0
-        else:
-            self.orginal_length = 0 
-            # print("index:",index)
-            # print("self.a value: ", len(self.list_of_ending_price)-self.a)
-        print("index:",index)
-        print("Number of iteration that it need go through:", len(self.list_of_ending_price)-self.a)
-        for i in range(index,len(self.list_of_ending_price)-self.a):
+        for i in range(len(self.list_of_ending_price)-self.a):
             temp_array = np.array([]) ## initial value for temp_array, in fact we are just making a container for all three values
-            # print("i: ",i-self.orginal_length) ## print the index
-            temp_array = np.append(temp_array,self.list_of_MFI[i-self.orginal_length]) ## append the value of MFI
-            # print("MFI value: ",self.list_of_MFI[i])
-            if index == 0: ## if the index is 0, we need to set the index to the current index
-                temp_array = np.append(temp_array,self.rsi_list[i-2]) ## append the value of RSI
-            else:
-                temp_array = np.append(temp_array,self.rsi_list[i-self.orginal_length])
-            # print("RSI value: ",self.rsi_list[i-2])
-            temp_array = np.append(temp_array,self.list_of_d_value[i-self.orginal_length]) ## append the value of D
-            # print("D value: ",self.list_of_d_value[i])
-            # break
+            temp_array = np.append(temp_array,self.list_of_MFI[i]) ## append the value of MFI
+            temp_array = np.append(temp_array,self.rsi_list[i-2]) ## append the value of RSI
+            temp_array = np.append(temp_array,self.list_of_d_value[i]) ## append the value of D
             W_moderate = 1/2*0.618**2*np.max(temp_array)+1/2*np.min(temp_array)+1/2*0.618*np.median(temp_array) ## calculate the W_moderate value
             W_sell = 1/2*0.618**2*np.min(temp_array)+1/2*np.max(temp_array)+1/2*0.618*np.median(temp_array) ## calculate the W_sell value
 
             W_moderate_list = np.append(W_moderate_list,W_moderate) ## append the value to the list
             W_sell_list = np.append(W_sell_list,W_sell) ## append the value to the list
-            # print("W_moderate value: ", W_moderate) ## print the W_moderate value
-            # print("W_sell value: ", W_sell) ## print the W_sell value
+
             if W_moderate < W_buy_trade: ## if the W_moderate is less than W_buy
                 self.comparing_date_purchase = np.append(self.comparing_date_purchase,i+self.a) ## append the indices of the purchase date to comparing date purchase
                 self.list_of_reflection = np.append(self.list_of_reflection,i) ## append the value to the list
@@ -805,153 +186,8 @@ class risk_assessment_library:
         
         self.W_moderate_list_within_class = W_moderate_list ## return the entire list
         self.W_sell_list_within_class = W_sell_list ## return the entire list
-        
-        # print("W_moderate_list: ", W_moderate_list) ## print the W_moderate_list
-        # print("W_sell_list: ", W_sell_list) ## print the W_sell_list
+
         return W_moderate_list,W_sell_list ## return the entire list
-
-    def calucate_elasped_days(self,start_date,end_date):
-        '''
-        This is the function that we use to calculate the elasped days
-
-        Parameters(Inputs):
-        -----------
-        start_date `(str)`: the start date
-        end_date `(str)`: the end date
-        
-        Returns:
-        -----------
-        elasped_days `(int)`: the elasped days
-        '''
-        date_format = "%Y-%m-%d"
-        start_datetime = datetime.strptime(start_date,date_format) ## convert the given string to datetime and it should be the starting date
-        end_datetime = datetime.strptime(end_date,date_format) ## convert the given string to datetime and it should be the ending date
-
-        elasped_days = (end_datetime-start_datetime).days
-
-        return elasped_days
-
-    def removing_stuff_from_the_list(self,buy_list,sell_list):
-        '''
-        This is the function that we use to remove the duplicate values in the buy list and sell list
-
-        Parameters(Inputs):
-        -----------
-            buy_list :
-                `(list[float])`: the list of buy list
-            sell_list :
-                `(list[float])`: the list of sell list
-
-        Returns:
-        -----------
-            removal_list_in_buy_list 
-                `(list[float])`: the list of removal list in buy list
-            removal_list_in_sell_list 
-                `(list[float])`: the list of removal list in sell list
-        '''
-        removal_list_in_buy_list = np.array([]) ## initial value for removal list in buy list
-        ## it is for removing the duplicate values in the buy list 
-        removal_list_in_sell_list = np.array([]) ## initial value for removal list in sell list
-        ## it is for removing the duplicate values in the sell list
-
-        for j in range(len(sell_list)):
-            if (j) > int(len(buy_list)):
-                break
-            else:
-                if sell_list[j] == sell_list[j-1]:
-                    if (buy_list[j]>buy_list[j-1]):
-                        removal_list_in_buy_list = np.append(removal_list_in_buy_list,buy_list[j])
-                        removal_list_in_sell_list = np.append(removal_list_in_sell_list,sell_list[j])
-
-        for i in removal_list_in_buy_list:
-            buy_list = np.delete(buy_list,np.where(buy_list==i))
-        
-        for j in removal_list_in_sell_list:
-            sell_list = np.delete(sell_list,np.where(sell_list==j))
-        
-        return buy_list,sell_list
-    
-    def remove_consecutive(self,input_list):
-        output_list = np.array([]) ## initial value for output list
-        skip = False
-        for i in range(len(input_list)):
-            if input_list[i] == 1+input_list[i-1] and skip == False: ## if the current value is equal to the previous value + 1 and skip is False
-                skip = True ## set the skip to True
-                continue
-            else:
-                skip = False ## set the skip to False
-                output_list = np.append(output_list,input_list[i]) ## append the value to the output list
-        return output_list ## return the output list
-    
-    def remove_duplicate_with_indices(self,buying_date,selling_date):
-        '''
-        This is the function that we use to remove the duplicate values in the buying date and selling date
-
-        Parameters(Inputs):
-        -----------
-            buying_date :
-                `(list[float])`: the list of buying date
-            selling_date :
-                `(list[float])`: the list of selling date
-
-        Returns:
-        -----------
-            unique_list 
-                `(list[float])`: the list of unique list
-            unique_indices 
-                `(list[float])`: the list of unique indices
-            unique_indices_for_buying_list 
-                `(list[float])`: the list of unique indices for buying list
-        '''
-
-        unique_list = np.array([]) ##uniuqe element in the list 
-        unique_indices = np.array([]) ## unique indices in the list
-        unique_indices_for_buying_list = np.array([]) ## unique indices for buying list
-        seen = set() ## making a set for the seen values
-
-        for index,item in enumerate(selling_date): ## loop through the selling date
-            if item not in seen:
-                unique_list = np.append(unique_list,item)
-                unique_indices = np.append(unique_indices,index)
-                unique_indices_for_buying_list = np.append(unique_indices_for_buying_list,buying_date[index])
-                seen.add(item)
-        
-        return unique_list,unique_indices,unique_indices_for_buying_list
-     
-    def calucate_profit(self,buying_price,selling_price):
-        '''
-        This is the function that we use to calculate the profit
-
-        Parameters(Inputs):
-        -----------
-        buying_price `(float)`: the buying price
-        selling_price `(float)`: the selling price
-
-        Returns:
-        -----------
-        profit `(float)`: the profit
-        '''
-        if self.area == "america":
-            quantity = 10000000/(buying_price)
-            quantity = round(quantity,0)
-            # print(quantity)
-            cost = quantity * buying_price*1.0028
-            # print(cost)
-            sell = quantity * selling_price
-            # print(sell)
-            difference = sell-cost
-        else:
-            quantity = 10000000/(buying_price)
-            quantity = round(quantity,-2)
-            # print(quantity)
-            cost = quantity * buying_price*1.0028
-            # print(cost)
-            sell = quantity * selling_price
-            # print(sell)
-            difference = sell-cost
-        
-        return cost,difference
-
 
     def income(self,target_rate = 0.03, losing_rate = 0.03):
         '''
@@ -1003,8 +239,8 @@ class risk_assessment_library:
         i =0 ## pointer value for the purchase date and prepare for any increment of the value of the date_purchase
         buy_in_array_pointer = 0 ## Pointer value for buy_at_the end array
 
-        # for j in range(len(self.comparing_date_purchase)):
-            # print("Before buying date: {} and value {}".format(self.list_of_date[int(self.comparing_date_purchase[j])], int(self.comparing_date_purchase[j]))) ## print the buying date
+        for j in range(len(self.comparing_date_purchase)):
+            print("Before buying date: {} and value {}".format(self.list_of_date[int(self.comparing_date_purchase[j])], int(self.comparing_date_purchase[j]))) ## print the buying date
         # for j in range(len(self.comparing_date_sell_off)):
             # print("selling date: ",self.list_of_date[int(self.comparing_date_sell_off[j])]) 
 
@@ -1158,6 +394,11 @@ class risk_assessment_library:
                             # print("we are selling off as lose trade:",self.list_of_date[int(k)]) ## print the date that we are selling
                             ## append the date to the selling date list => When we sell and append it to the list
                             lose_trade_count += 1 ## increment the lose trade count < 0.97 percentage
+
+                            if self.W_moderate_list[k] > self.W_buy or self.W_sell_list[k] > self.W_sell: ## if the W_buy is less than W_buy 
+                                ## we are just stop buying
+                                print("We are not buying anymore since it is too high")
+                                break ## break the loop since we have found the drop too much point
 
                             ## we need to buy at the same day 
                             buying_date = np.append(buying_date,self.list_of_date[int(k)]) 
@@ -1387,8 +628,8 @@ class risk_assessment_library:
         # print("Number of trades : ",len(self.buy_at_ending_price)) ## print the number of trades
         # print("Number of sell_of: ",len(self.sell_at_ending_price)) ## print the number of buy in
 
-        # print("After buying date : ",buying_date) ## print the buying date
-        # print("After selling date : ",selling_date) ## print the selling date
+        print("buying date : ",buying_date) ## print the buying date
+        print("selling date : ",selling_date) ## print the selling date
 
         # for i in range(len(self.buy_at_ending_price)):
         for i in range(len(buying_date)):
@@ -1470,135 +711,406 @@ class risk_assessment_library:
         self.average_day = average_day
         return ag,agpd,len(self.elasped_day),average_day,day_std_deviation,revenue_per_year,absolute_win_trade_rate,draw_win_trade_rate,draw_lose_trade_rate,lose_trade_rate
     
-    def days_has_been_below_17(self):
+    def getting_the_list_from_the_file(self,filename):
         '''
-        This is the function that we use to calculate the days that has been below 17
-        '''
-        counter= 0
-        for i in range(1,len(self.W_moderate_list_within_class)):
-            if (self.W_moderate_list_within_class[-i])<=17:
-                counter +=1
-            else:
-                break        
-        return counter
-    
-    def re_work(self):
-        '''
-        This is the function that we use to reset the calucation and work on the prediction value
-        '''
-        self.get_date()
-        self.RSV()
-        self.rsi_list = self.ema()
-        self.K()
-        self.d_list = self.D()
-        self.MFI_list = self.MFI_list1()
-        # print(len(self.rsi_list))
-        self.W_moderate_list,self.W_sell_list = self.W_moderate()
-        # print(self.W_moderate_list_within_class)
-        self.ag, self.agpd,self.number_of_trade,self.average_day, self.day_std_deviation,self.revenue_per_year = self.income()
-        self.average_volume = np.mean(self.list_of_volume_of_exchange)    
+        This is the function that we use to get the list from the file
 
-    def close(self):
-        '''
-        This is the function that we use to close the object and resetting all the variable that we are using so that we can reinitate the object
+        -----------
+        Parameters(Inputs):
+        -----------
+        * filename `(str)`: the name of the file that we want to read
+
+        -----------
+        Returns:
+        -----------
+        nothing but prepre all the list
         '''
 
-        self.list_of_opening_price = np.array([]) ## initial value for list of opening price
-        self.list_of_maximum_price = np.array([]) ## initial value for list of maximum price
-        self.list_of_minimum_price = np.array([]) ## initial value for list of minimum price
-        self.list_of_volume_of_exchange = np.array([]) ## initial value for list of volume of exchange
-        self.alpha = 2/15 ## the mutiplier for ema values 
-        self.ema_value = 30 ## initial value for ema
-        self.price = 0 ## initial value for price
-        self.date = 0 ## initial value for date
-        self.date_14 = 0 ## initial value for date_14
-        self.k_value = 50 ## initial value for k value
-        self.list_of_date = np.array([]) ## initial value for list of date
-        self.list_of_ending_price = np.array([]) ## initial value for list of ending price
-        self.list_of_rsv = np.array([]) ## initial value for list of rsv
-        self.list_of_k_value = np.array([]) ## initial value for list of k value
-        self.list_of_d_value = np.array([]) ## initial value for list of d value
-        self.d_value = 50 ## initial value for d value
-        self.list_of_MFI = np.array([]) ## initial value for list of MFI
-        self.sum_of_positive_ema_value = 0 
-        self.sum_of_negative_ema_value = 0
-        self.list_of_volume_exceed = np.array([]) ## initial value for list of volume exceed
-        self.list_of_rate_of_change = np.array([]) ## initial value for list of volume
-        self.list_after_editing = np.array([]) ## initial value for list after editing
-        self.list_of_volume_of_exchange_hand = np.array([]) ## initial value for list of volume of exchange hand
-        self.list_of_rate_of_change_in_float = np.array([]) ## initial value for list of rate of change in float
-        self.up = np.array([]) ## initial value for up
-        self.down = np.array([]) ## initial value for down
-        self.ema_list = np.array([]) ## initial value for ema list
-        self.ema_up = 0
-        self.ema_down = 0
-        self.rsi_list = np.array([]) ## initial value for rsi list
-        self.W_list = np.array([]) ## initial value for W list
-        self.W_value = 0
-        self.a = 0 
-        self.mfr = 0
-        self.comparing_date_purchase = np.array([]) ## initial value for comparing date purchase
-        self.comparing_date_sell_off = np.array([]) ## initial value for comparing date sell
-        self.strings = np.array([]) ## initial value for strings
-        self.x =0
-        self.actual_purchase = np.array([]) ## initial value for actual purchase
-        self.actual_sell_off = np.array([]) ## initial value for actual sell off
-        self.removal = 0 
-        self.actual_actual_purchase = np.array([]) ## initial value for actual actual purchase
-        self.total_cost = np.array([]) ## initial value for total cost
-        self.total_revenue =np.array([]) ## initial value for total revenue
-        self.elasped_day = np.array([]) ## initial value for elasped day
-        self.number_of_trade = 0
-        self.total_cost_value= 0
-        self.total_revenue_value =0
-        self.total_elasped_day= 0 
-        self.ag = 0
-        self.agpd=0
-        self.revenue_per_year = 0
-        self.buy_at_ending_price = np.array([]) ## initial value for buy at ending price
-        self.sell_at_ending_price =np.array([]) ## initial value for sell at ending price
-        self.current_price =0 
-        self.current_price_list = np.array([]) ## initial value for current price list
-        self.list_of_reflection = np.array([]) ## initial value for list of reflection
-        self.W_moderate_list = np.array([]) ## initial value for W moderate list
-        self.W_sell_list = np.array([])
-        self.W_moderate_list_within_class=np.array([]) ## initial value for W moderate list within class
-        self.elasped_day_list = np.array([]) ## initial value for elasped day list
-        self.W_sell_list_within_class = np.array([]) ## initial value for W sell list within class
-        self.winrate = 0 ## initial value for winrate
-        self.average_day = 0 ## initial value for average day
-        self.absolut_trade_winrate = 0
-        self.draw_win_winrate = 0
-        self.draw_lose_winrate = 0
-        self.lose_winrate = 0 
+        with open(filename, 'r', encoding='utf8') as f:  ## open the file
+            strings = f.read().split("\n")  ## read the file and split by new line
+
+            strings = strings[1:-2]  ## remove the first and the last element
+            for string in strings:
+                string= string.split(",",12)
+                
+                ### append the value to the list
+                self.list_of_date = np.append(self.list_of_date,string[0])
+                self.list_of_opening_price = np.append(self.list_of_opening_price,float(string[1]))
+                self.list_of_ending_price = np.append(self.list_of_ending_price,float(string[2]))
+                self.list_of_maximum_price = np.append(self.list_of_maximum_price,float(string[3]))
+                self.list_of_minimum_price = np.append(self.list_of_minimum_price,float(string[4]))
+                self.list_of_volume_of_exchange = np.append(self.list_of_volume_of_exchange,float(string[5]))
+                self.list_of_MFI = np.append(self.list_of_MFI,float(string[6]))
+                self.rsi_list = np.append(self.rsi_list,float(string[7]))
+                self.list_of_k_value = np.append(self.list_of_k_value,float(string[8]))
+                self.list_of_d_value = np.append(self.list_of_d_value,float(string[9]))
+                self.W_moderate_list = np.append(self.W_moderate_list,float(string[10]))
+                self.W_sell_list = np.append(self.W_sell_list,float(string[11]))
+
+def document_overview_winrate(winrate_requirement:float):
+        # Example usage of the try_out class
+    stock_price_america = r"stock_list/nasdaqlisted.txt" ## getting the reference 
+
+    filename = "generated_file/America/winrate_america_all_modified.txt" ## the fila that we are going to write on
+
+    list_of_america = [] ## the list of all the stock symbol in America
+    f= open(stock_price_america,"r",encoding="utf8") ## open the file
+    strings = f.read().split("\n") ## read the file and split by new line
+    strings = strings[1:-1]    ## remove the first and the last element
+
+    for string in strings:  ## for each string in the strings
+        list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
+
+    # list_of_america= ["XLO"]
+
+    with open(filename,'a+') as f: ## prepare the file
+        f.write("Stock_ID" + " " + "AGPD_value " + "Number_of_Trade"+ " "+"Average_Day" + " " + "Average_WinRate"+" "+"absolute_win_rate"+" "+"draw_win_rate" +" "+"draw_lose_rate"+" "+"lose_rate"   +"\n")
+
+    for i in list_of_america:  ## for each stock symbol in the list of america
+        try: 
+            print(i) 
+            a = try_out(i,W_buy = 17,W_sell =26) ## get the risk assessment library
+
+            with open(filename, "a+") as f: ## open the file to write
+                if (a.agpd > 0.001 and a.number_of_trade >= 4 and a.agpd != 1 and float(a.list_of_ending_price[-1]) >2 and a.W_moderate_list[-1] > 0 and a.average_volume > 500000):
+                    f.write(i + "," + str(a.agpd) + "," + str(a.number_of_trade) + "," + str(a.average_day) + "," + str(a.win_rate) +","+str(a.absolut_trade_winrate)+","+str(a.draw_win_winrate)+","+str(a.draw_lose_winrate)+","+str(a.lose_winrate) +"\n")
+        except IndexError:
+            print("Index Error for stock symbol:", i)
+            pass
+        except FileNotFoundError:
+            print("File Not found error for stock symbol:", i)
+            pass
+        except ZeroDivisionError:
+            print("Zero Division Error for stock symbol:", i)
+            pass
+        except Exception as e:
+            print(f"An error occurred for stock symbol {i}: {e}")
+            pass
+
+
+def exporting_to_document():
+    '''
+    This is the function that we use to export the data to a document
+
+    -----------
+    Parameters(Inputs):
+    -----------
+    * self: Just pass in the object
+
+    -----------
+    Returns:
+    -----------
+    None
+    '''
+
+    ## preparing the document 
+    stock_price_america = r"stock_list/nasdaqlisted.txt" ## getting the reference 
+    list_of_america = [] ## the list of all the stock symbol in America
+    f= open(stock_price_america,"r",encoding="utf8") ## open the file
+    strings = f.read().split("\n") ## read the file and split by new line
+    strings = strings[1:-1]    ## remove the first and the last element
+
+    for string in strings:  ## for each string in the strings
+        list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
+
+    # list_of_america = ["KRYS"] ## just for testing purpose, we can remove this later onXLO
+    for i in list_of_america:
+        try:
+            print(i)
+
+            filename = "generated_file/America/stock_data/{}_modified.txt".format(i)
+
+            a = try_out(i,W_buy = 17,W_sell =26) ## get the risk assessment library
+            Path("generated_file/America/stock_data").mkdir(parents=True, exist_ok=True) ## create the directory if it does not exist
+            with open(filename,'a+') as f: ## prepare the file
+                f.write("Date,Opening_Price,Closing_Price,Maximum_Price,Minimum_Price,Volume_of_Exchange,MFI,RSI,K,D,W_moderate,W_sell\n") ## writing the header for the file
+
+            for i in range(15,len(a.list_of_opening_price)):
+                with open(filename, "a+") as f:
+                    f.write(f"{a.list_of_date[i]},{a.list_of_opening_price[i]},{a.list_of_ending_price[i]},{a.list_of_maximum_price[i]},{a.list_of_minimum_price[i]},{a.list_of_volume_of_exchange[i]},{a.list_of_MFI[i-13]},{a.rsi_list[i-15]},{a.list_of_k_value[i-13]},{a.list_of_d_value[i-13]},{a.W_moderate_list[i-13]},{a.W_sell_list[i-13]}\n")
+            print(f"Data for {a.stock_symbol} has been exported to {filename}")
+
+        except IndexError:
+            print("Index error for stock symbol:", i)
+            pass
+
+        except FileNotFoundError:
+            print("File Not found error for stock symbol:", i)
+            pass
+
+        except ZeroDivisionError:
+            print("Zero Division Error for stock symbol:", i)
+            pass
+
+        except Exception as e:
+            print(e)
+            pass
+
+class trainer(risk_assessment_library):
+    '''
+    This is the trainer class that we use to train the model
+    '''
+
+    def __init__(self, stock_symbol, W_buy_list: list, W_sell_list: list, target_rate_list: list, losing_rate_list: list):
+        self.close() ### clearing the file first => Idk why can have error if you are spamming it for too long time
+        self.name = stock_symbol ## the name of the stock symbol
+        self.stock_symbol = stock_symbol ## the stock symbol
+        self.area = "america" ## the area of the stock symbol	
+        past_record = "generated_file/America/stock_data/{}.txt".format(self.name) ## the past record of the data
+        self.W_buy_list = W_buy_list ## the list of W_buy
+        self.W_sell_list = W_sell_list ## the list of W_sell
+        self.target_rate_list = target_rate_list ## the list of target rate
+        self.losing_rate_list = losing_rate_list ## the list of losing rate
+        if os.path.exists(past_record): ## if the past record exists
+            self.getting_the_list_from_the_file(past_record) ## get the list from the file
+        else:
+            print("The file does not exist, please run the try_out function first") ## if the file does not exist, then we just print the message
+            exit()
+
+        self.average_volume = np.mean(self.list_of_volume_of_exchange) * self.list_of_ending_price[-1] ## calculate the average volume of exchange
+
+
+        # ## need volume data to be more than 1000000
+        # if self.average_volume < 100000: ## if the average volume is less than 1000000
+        #     return 
+
+        ## storing the result 
+        self.result_revenue_list = np.array([]) ## the result list
+        self.result_winrate_list = np.array([]) ## the result winrate list
+        self.result_number_of_trade_list = np.array([]) ## the result number of trade list
+
+        for i in range(len(W_buy_list)):
+            if np.average(self.list_of_volume_of_exchange) * self.list_of_ending_price[-1] < 1000000: ## if the average volume of exchange is less than 1000000
+                print(f"Average volume of exchange for {self.stock_symbol} is less than 1000000, skipping W_buy: {W_buy_list[i]}")
+                break
+            if self.list_of_ending_price[-1] < 2:
+                print(f"Ending price for {self.stock_symbol} is less than 2, skipping W_buy: {W_buy_list[i]}")
+                break
+            for j in range(len(W_sell_list)):
+                for k in range(len(target_rate_list)):
+                    for l in range(len(losing_rate_list)):
+                        
+                        for m in range(len(self.list_of_ending_price)-self.a):
+                            if self.W_moderate_list[m] < W_buy_list[i]: ## if e W_moderate is less than W_buy
+                                self.comparing_date_purchase = np.append(self.comparing_date_purchase,m+self.a) ## append the indices of the purchase date in the list of_date to comparing date purchase
+                                self.list_of_reflection = np.append(self.list_of_reflection,m) ## append the value to the list
+                            if self.W_sell_list[m] > W_sell_list[j]: ## if the W_sell is greater than W_sell
+                                self.comparing_date_sell_off = np.append(self.comparing_date_sell_off,m+self.a) ## append the indices of the date that we ought to sell off to the comparing date sell off
+                                # print("Sell off date: ",self.list_of_date[i+self.a]) ## print the sell off date
+                    
+                        # print(f"Testing W_buy: {W_buy_list[i]}, W_sell: {W_sell_list[j]}, target_rate: {target_rate_list[k]}, losing_rate: {losing_rate_list[l]}")
+                        self.ag, self.agpd,self.number_of_trade,self.average_day, self.day_std_deviation,self.revenue_per_year,self.absolut_trade_winrate,self.draw_win_winrate,self.draw_lose_winrate,self.lose_winrate = self.income(target_rate_list[k],losing_rate_list[l]) ## doing the final analysis and testing it through the past data by adding the virtual money and see
+                        self.average_volume = np.mean(self.list_of_volume_of_exchange)*self.list_of_ending_price[-1]  ## calucating the average of all
+                        self.result_revenue_list = np.append(self.result_revenue_list, self.revenue_per_year) ## append the revenue to the list
+                        self.result_winrate_list = np.append(self.result_winrate_list, self.win_rate) ## append the winrate to the list
+                        self.result_number_of_trade_list = np.append(self.result_number_of_trade_list, self.number_of_trade) ## append the number of trade to the list
+                        self.income_reset() ## reset the income variables
+                        # print(f"Results for {self.stock_symbol} with W_buy: {round(W_buy_list[i],2)}, W_sell: {round(W_sell_list[j],2)}, target_rate: {round(target_rate_list[k],4)}, losing_rate: {round(losing_rate_list[l],4)} - AG: {round(self.ag,4)}, AGPD: {round(self.agpd,4)}, Number of Trades: {round(self.number_of_trade,2)}, Average Day: {round(self.average_day,4)}, Day Std Deviation: {round(self.day_std_deviation,4)}, Revenue per Year: {self.revenue_per_year}, Absolute Win Rate: {round(self.absolut_trade_winrate,4)}, Draw Win Rate: {round(self.draw_win_winrate,4)}, Draw Lose Rate: {round(self.draw_lose_winrate,4)}, Lose Rate: {round(self.lose_winrate,4)}")
         
-    def print_info(self):
-        print(f"Stock Symbol: {self.stock_symbol}")
-        print(f"AGPD: {self.agpd}")
-        print(f"Number of Trades: {self.number_of_trade}")
-        print(f"Ending Price: {self.list_of_ending_price[-1]}")
-        print(f"W Moderate List: {self.W_moderate_list}")
+        self.result_revenue_list = np.reshape(self.result_revenue_list, (len(W_buy_list), len(W_sell_list), len(target_rate_list), len(losing_rate_list))) ## reshape the result revenue list    
+        self.result_winrate_list = np.reshape(self.result_winrate_list, (len(W_buy_list), len(W_sell_list), len(target_rate_list), len(losing_rate_list))) ## reshape the result winrate list
+        self.result_number_of_trade_list = np.reshape(self.result_number_of_trade_list, (len(W_buy_list), len(W_sell_list), len(target_rate_list), len(losing_rate_list))) ## reshape the result number of trade list
+        print("Training completed for stock symbol:", self.stock_symbol) ## print the training completed message
+        
+
+    def best_option_winrate(self):
+        '''
+        This is the function that we use to get the best option from the result
+        '''
+        ## best option found (winrate)
+        max_winrate = np.max(self.result_winrate_list) ## get the maximum winrate
+        max_winrate_indices = np.argwhere(self.result_winrate_list == max_winrate)
+        print("Best options found in terms of winrate:", max_winrate) ## print the best options found in terms of winrate
+        print(f"And it is using the parameters of W_buy: {self.W_buy_list[max_winrate_indices[0][0]]}, W_sell: {self.W_sell_list[max_winrate_indices[0][1]]}, target_rate: {self.target_rate_list[max_winrate_indices[0][2]]}, losing_rate: {self.losing_rate_list[max_winrate_indices[0][3]]}")
+        return_string = f"Winrate: {max_winrate},W_buy: {self.W_buy_list[max_winrate_indices[0][0]]}, W_sell: {self.W_sell_list[max_winrate_indices[0][1]]}, target_rate: {self.target_rate_list[max_winrate_indices[0][2]]}, losing_rate: {self.losing_rate_list[max_winrate_indices[0][3]]}, Win_rate:{max_winrate}\n"
+        # print(return_string) ## print the return string
+        return return_string ## return the string
+        # print("Best options found in terms of winrate:", max(self.result_winrate_list)) ## print the best options found in terms of winrate
+        # print(f"And it is using the parameters of {np.argwhere(self.result_revenue_list,max(self.result_winrate_list))}")
+        # print("Best options found in terms of revenue:", max(self.result_revenue_list)) ## print the best options found in terms of revenue
+
+        # print("Best options found in terms of number of trades:", max(self.result_number_of_trade_list)) ## print the best options found in terms of number of trades
+    def best_option_revenue(self):
+        '''
+        This is the function that we use to get the best option from the result
+        '''
+        ## best option found (revenue)
+        max_revenue = np.max(self.result_revenue_list)
+        max_revenue_indices = np.argwhere(self.result_revenue_list == max_revenue)
+        ## look for winrate 
+        winrate = self.result_winrate_list[max_revenue_indices[0][0], max_revenue_indices[0][1], max_revenue_indices[0][2], max_revenue_indices[0][3]]
+        print("Best options found in terms of winrate:", max_revenue) ## print the best options found in terms of winrate
+        print(f"And it is using the parameters of W_buy: {self.W_buy_list[max_revenue_indices[0][0]]}, W_sell: {self.W_sell_list[max_revenue_indices[0][1]]}, target_rate: {self.target_rate_list[max_revenue_indices[0][2]]}, losing_rate: {self.losing_rate_list[max_revenue_indices[0][3]]}")
+        return_string = f"Revenue: {max_revenue},W_buy: {self.W_buy_list[max_revenue_indices[0][0]]}, W_sell: {self.W_sell_list[max_revenue_indices[0][1]]}, target_rate: {self.target_rate_list[max_revenue_indices[0][2]]}, losing_rate: {self.losing_rate_list[max_revenue_indices[0][3]]}, Win_rate: {winrate}\n"
+        # print(return_string) ## print the return string
+        return return_string ## return the string
+        # print("Best options found in terms of winrate:", max(self.result_winrate_list)) ## print the best options found in terms of winrate
+        # print(f"And it is using the parameters of {np.argwhere(self.result_revenue_list,max(self.result_winrate_list))}")
+        # print("Best options found in terms of revenue:", max(self.result_revenue_list)) ## print the best options found in terms of revenue
+
+    def return_outcome(self) -> tuple:
+        return self.result_revenue_list, self.result_winrate_list, self.result_number_of_trade_list
+    
+    def income_reset(self):
+        '''
+        This is the function that we use to reset the variable that is assoicated income
+
+        -----------
+        Parameters(Inputs):
+        -----------
+        * self: Just pass in the object
+
+        -----------
+        Returns:
+        -----------
+        None
+        '''
+
+        self.comparing_date_purchase = np.array([]) ## the comparing date purchase
+        self.comparing_date_sell_off = np.array([])
+        self.buy_at_ending_price = np.array([]) ## the buy at ending price
+        self.sell_at_ending_price = np.array([])
+        self.number_of_trade = 0 ## the number of trade 
+        self.elasped_day = np.array([]) ## the elasped day
+        self.total_elasped_day = 0
+def overview():
+    '''
+    This is the function where we are trying to get the overview of which W_buy or W_sell value is the best for current situation
+
+    '''
+
+    ### Getting the symbol of all stock symbol in America 
+
+    stock_price_america = r"stock_list/nasdaqlisted.txt" ## getting the reference
+    list_of_america = [] ## the list of all the stock symbol in America
+    f= open(stock_price_america,"r",encoding="utf8") ## open the file
+    strings = f.read().split("\n") ## read the file and split by new line
+    strings = strings[1:-1]    ## remove the first and the last element
+    for string in strings:  ## for each string in the strings
+        list_of_america.append(string.split("|",1)[0])
+    # list_of_america = ["KRYS"] ## just for testing purpose, we can remove this later on
+
+    ## Collecting results
+    total_revenue = np.array([]) ## the total revenue
+    total_cost = np.array([]) ## the total cost
+    total_winrate = np.array([]) ## the total winrate
+    total_ag = np.array([]) ## the total ag
+    total_agpd = np.array([]) ## the total agpd
+    total_number_of_trade = np.array([]) ## the total number of trade
+    total_average_day = np.array([]) ## the total average day
+    total_day_std_deviation = np.array([]) ## the total day standard deviation
+
+    ## Testing variable
+    W_buy_list = np.arange(15,19,0.2) ## the list of W_buy value  20
+    W_sell_list = np.arange(25,30,0.2) ## the list of W_sell value 25
+    target_rate_list = np.arange(0.02,0.05,0.002) ## the list of target rate value 15 
+    losing_rate_list = np.arange(0.02,0.05,0.002) ## the list of losing rate value 15
+
+    for i in list_of_america:  ## for each stock symbol in the list of america
+        try:
+            print(i)
+
+            ## within_stock_wise_list 
+
+        except:
+            print("Error for stock symbol:", i)
+            pass
+
 
 if __name__ == "__main__":
-    ## demo program for running the thing
-    time1 = time.time_ns() ##recording the time
-    a = risk_assessment_library("AAXJ",W_buy=17,W_sell=26,target_rate=0.04,losing_rate=0.04,replying_on_past_record=True,scapper_on_or_off=True) ## running the object and get the object
-    a.print_info() ## print the information of the object
-    # print(a.number_of_trade)
-    # for i in range(len(a.W_moderate_list_within_class)):
-        # print("d value:",a.W_moderate_list_within_class[i] )
-        # print("W_moderate_list_within_class",a.W_moderate_list_within_class[i])
-    # print(a.d_list)
-    # for i in range(10):
-    #     print("rsi",a.list_of_rsv[i])
-        
-    #     print("d_value,",a.list_of_d_value[i])
-    #     print("MFI:",a.MFI_list[i])
-    # a.close()
-    time2 = time.time_ns() ## marking the running time
-    # print("Time taken : ",time2-time1)
-    print("in seconds:",(time2-time1)/1000000000) ## showcasing how fast can it run
+    # import time as timer
+    # timer1 = timer.time_ns()  # Start the timer
+    
+    # trainer("AADR",
+    #         W_buy_list=np.arange(15, 20, 0.2).tolist(),
+    #         W_sell_list=np.arange(25, 30, 0.2).tolist(),
+    #         target_rate_list=[0.03],
+    #         losing_rate_list=[0.03]
+    #     )
+    ## preparing the document 
+    stock_price_america = r"stock_list/nasdaqlisted.txt" ## getting the reference 
+    list_of_america = [] ## the list of all the stock symbol in America
+    f= open(stock_price_america,"r",encoding="utf8") ## open the file
+    strings = f.read().split("\n") ## read the file and split by new line
+    strings = strings[1:-1]    ## remove the first and the last element
 
-    # for i in range(len(a.W_moderate_list_within_class)):
-    #     print(a.W_moderate_list_within_class[i])
+    for string in strings:  ## for each string in the strings
+        list_of_america.append(string.split("|",1)[0])   ## split by the pipe and append to the list of america
+
+    filename1 = "generated_file/America/best_option_winrate.txt" ## the file that we are going to write on
+    filename2 = "generated_file/America/best_option_revenue.txt" ## the file that we are going to write on
+    with open(filename1,'w') as f: ## prepare the file
+        f.write("Stock_ID,Best_winrate,W_buy,W_sell,target_rate,losing_rate\n") ## writing the header for the file
+    with open(filename2,'w') as f: ## prepare the file
+        f.write("Stock_ID,Best_revenue,W_buy,W_sell,target_rate,losing_rate,Win_rate\n")
+    for i in list_of_america:  ## for each stock symbol in the list of america
+        try:
+            object = trainer(i,
+                    W_buy_list=np.arange(15, 20, 0.5).tolist(),
+                    W_sell_list=np.arange(25, 30, 0.5).tolist(),
+                    target_rate_list=np.arange(0.02, 0.05, 0.005).tolist(),
+                    losing_rate_list=np.arange(0.02, 0.05, 0.005).tolist()
+                )
+            best_option_winrate = object.best_option_winrate()  ## get the best option from the trainer class
+            best_option_revenue = object.best_option_revenue()  ## get the best option from the trainer class
+            print(best_option_winrate)
+            with open(filename1, "a+") as f:
+                # Parse best_option string robustly
+                parts = best_option_winrate.replace('\n', '').split(',')
+                winrate = parts[0].split('Winrate: ')[1]
+                W_buy = parts[1].split('W_buy: ')[1]
+                W_sell = parts[2].split('W_sell: ')[1]
+                target_rate = parts[3].split('target_rate: ')[1]
+                losing_rate = parts[4].split('losing_rate: ')[1]
+                f.write(f"{i},{winrate},{W_buy},{W_sell},{target_rate},{losing_rate}\n")
+            with open(filename2, "a+") as f:
+                # Parse best_option string robustly
+                parts = best_option_revenue.replace('\n', '').split(',')
+                revenue = parts[0].split('Revenue: ')[1]
+                W_buy = parts[1].split('W_buy: ')[1]
+                W_sell = parts[2].split('W_sell: ')[1]
+                target_rate = parts[3].split('target_rate: ')[1]
+                losing_rate = parts[4].split('losing_rate: ')[1]
+                reswinrate = parts[5].split('Win_rate: ')[1]
+                f.write(f"{i},{revenue},{W_buy},{W_sell},{target_rate},{losing_rate},{reswinrate}\n")
+        except IndexError:
+            print("Index Error for stock symbol:", i)
+            pass
+        except FileNotFoundError:
+            print("File Not found error for stock symbol:", i)
+            pass
+        except ZeroDivisionError:
+            print("Zero Division Error for stock symbol:", i)
+            pass
+        except Exception as e:
+            print(f"An error occurred for stock symbol {i}: {e}")
+            pass
+
+
+
+            
+
+    # # timer2 = timer.time_ns()  # End the timer
+    # # print(f"Time taken for the operation: {(timer2 - timer1) / 1e9} seconds")  # Print the time taken for the operation
+    
+
+    # # time1 = time.time_ns()
+    
+    stock_symbol = "AADR"  # Example stock symbol
+    # trying = try_out(stock_symbol, W_buy=17, W_sell=29,target_rate=0.04,losing_rate=0.042)  # Create an instance of the try_out class
+    # # Example usage of the try_out class
+    # # document_overview_winrate(winrate_requirement=0.5)  # Document overview with a win rate requirement
+    # # time2 = time.time_ns()
+    # # print("Time taken for the operation: ", (time2 - time1) / 1e9, "seconds")  # Print the time taken for the operation
+    # # exporting_to_document()  # Export the data to a document
+    # # print("Stock : " , stock_symbol)
+    try_out_instance = try_out(stock_symbol,W_buy =17,W_sell=26)
+    try_out_instance.print_info()
+    
+    # # W_buy = 17  # Example W_buy value
+    # # W_sell = 26  # Example W_sell value
+    # # W_moderate_list, W_sell_list = try_out_instance.W_moderate(W_buy, W_sell)
+    
+    # # print("W Moderate List:", W_moderate_list)
+    # # print("W Sell List:", W_sell_list)
 
