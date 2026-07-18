@@ -1,0 +1,208 @@
+Metadata-Version: 2.4
+Name: ib_paper
+Version: 0.1.0
+Summary: Interactive Brokers Paper Trading CLI
+Home-page: https://github.com/riggy420/ne-library
+Author: Ricky
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Office/Business :: Financial :: Investment
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: ib_insync>=0.9.86
+Requires-Dist: click>=8.0
+Requires-Dist: flask>=3.0
+Requires-Dist: flask-socketio>=5.0
+Requires-Dist: eventlet>=0.30
+Dynamic: author
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# ibpaper — Interactive Brokers Paper Trading CLI
+
+Trade your IB paper account from the command line.
+
+## Prerequisites
+
+- **Python 3.10+**
+- **TWS** (Trader Workstation) or **IB Gateway** running with API enabled
+  - *File → Global Configuration → API → Settings → Enable ActiveX and Socket Clients*
+  - Paper trading uses port **7497** by default
+
+## Installation
+
+```powershell
+# Create and activate a virtual environment
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+
+# Install ibpaper in editable mode
+pip install -e .
+```
+
+## Quick Start
+
+```bash
+# 1. Check your config (defaults are fine for local TWS paper)
+ibpaper setup --show
+
+# 2. View your paper account balance
+ibpaper account
+
+# 3. Enter a position
+ibpaper buy AAPL --qty 10
+
+# 4. Check your positions
+ibpaper positions
+
+# 5. Exit a position
+ibpaper sell AAPL --all
+```
+
+## Command Reference
+
+### `ibpaper setup`
+
+Configure connection settings (saved to `~/.ib_paper/config.json`).
+
+```bash
+ibpaper setup --show              # View current config
+ibpaper setup --port 7497          # Set paper trading port
+ibpaper setup --default-qty 50     # Change default order quantity
+```
+
+### `ibpaper account`
+
+View account information.
+
+```bash
+ibpaper account                    # Summary (default)
+ibpaper account --portfolio        # Positions + P&L
+ibpaper account --pnl              # P&L breakdown only
+```
+
+### `ibpaper buy SYMBOL`
+
+Enter a position.
+
+```bash
+ibpaper buy AAPL                   # Market buy, default quantity
+ibpaper buy AAPL --qty 50          # Market buy 50 shares
+ibpaper buy AAPL -q 10 -l 150.00   # Limit buy @ $150
+ibpaper buy AAPL --stop 155.00     # Stop buy @ $155
+ibpaper buy AAPL --dry-run         # Validate without placing
+ibpaper buy AAPL --qty 10 --yes    # Skip confirmation prompt
+```
+
+### `ibpaper sell SYMBOL`
+
+Exit a position.
+
+```bash
+ibpaper sell AAPL --all            # Close entire position at market
+ibpaper sell AAPL --qty 50         # Sell 50 shares at market
+ibpaper sell AAPL -q 10 -l 155.00  # Limit sell @ $155
+ibpaper sell AAPL --all --stop 145 # Stop-loss on full position
+ibpaper sell AAPL --dry-run        # Validate without placing
+```
+
+### `ibpaper positions`
+
+List current positions.
+
+```bash
+ibpaper positions                  # All positions
+ibpaper positions --symbol AAPL    # Single position detail
+```
+
+### `ibpaper orders`
+
+View orders from the current session.
+
+```bash
+ibpaper orders                     # Active orders
+ibpaper orders --completed         # Filled / cancelled
+ibpaper orders --all               # Everything
+```
+
+### `ibpaper cancel ID`
+
+Cancel a pending order.
+
+```bash
+ibpaper cancel 42
+```
+
+## Configuration
+
+Config is stored as JSON at `~/.ib_paper/config.json`:
+
+```json
+{
+  "connection": {
+    "host": "127.0.0.1",
+    "port": 7497,
+    "client_id": 1,
+    "timeout": 10
+  },
+  "defaults": {
+    "order_quantity": 100,
+    "order_type": "MKT",
+    "currency": "USD",
+    "exchange": "SMART"
+  },
+  "safety": {
+    "confirm_live": true,
+    "confirm_orders": true
+  }
+}
+```
+
+## Safety
+
+- **Default port is 7497** (paper). Port 7496 (live) triggers a warning.
+- **Confirmation prompt** before every order (skip with `--yes`).
+- **`--dry-run`** validates the symbol and order without placing it.
+- Set `"confirm_live": false` in config to suppress the live-port warning (use with caution).
+
+## Programmatic API
+
+```python
+from ib_paper import ConnectionManager, AccountService, OrderService
+
+with ConnectionManager() as cm:
+    # Account
+    snap = AccountService.get_summary(cm.ib)
+    print(f"NetLiq: {snap.net_liquidation}")
+
+    # Enter a position
+    from ib_paper import OrderRequest, OrderAction, OrderType
+    req = OrderRequest(symbol="AAPL", action=OrderAction.BUY,
+                       total_quantity=10, order_type=OrderType.MKT)
+    trade = OrderService.place_order(cm.ib, req)
+    print(f"Order {trade.order.orderId}: {trade.orderStatus.status}")
+```
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "Could not connect" | Make sure TWS/IB Gateway is running and API is enabled |
+| "Symbol could not be resolved" | Check the ticker spelling; try with `--dry-run` first |
+| "Order rejected" | Check buying power, order quantity, and price |
+| Port conflict | Ensure no other application is using the same client ID |
+
+## License
+
+MIT

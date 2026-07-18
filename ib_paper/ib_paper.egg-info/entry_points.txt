@@ -1,0 +1,3 @@
+[console_scripts]
+ibpaper = ib_paper.cli:main
+ibpaper-server = ib_paper.server:main

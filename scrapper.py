@@ -7,8 +7,8 @@ from datetime import datetime
 import time
 from requests import Session
 from requests_cache import CacheMixin, SQLiteCache
-from requests_ratelimiter import LimiterMixin, MemoryQueueBucket
-from pyrate_limiter import Duration, RequestRate, Limiter
+from requests_ratelimiter import LimiterMixin
+from pyrate_limiter import Duration, Rate, Limiter, InMemoryBucket
 import time
 import requests_cache
 from pathlib import Path
@@ -26,8 +26,8 @@ class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
     pass
 
 session = CachedLimiterSession(
-    limiter=Limiter(RequestRate(2, Duration.SECOND*5)),  # max 2 requests per 5 seconds
-    bucket_class=MemoryQueueBucket,
+    limiter=Limiter(Rate(2, Duration.SECOND*5)),  # max 2 requests per 5 seconds
+    bucket_class=InMemoryBucket,
     backend=SQLiteCache("yfinance.cache")
 )
 
@@ -202,8 +202,9 @@ class scrapper():
                 session = request.Session(impersonate="chrome")
 
                 filename = 'stock_data/'+str(area)+"/"+indexes+'.txt'
+                pd.read_csv(filename)
                 refreshing = False
-                if Path(filename).exists():
+                if Path(filename).is_file(): ## check if the destinated files exist or not 
                     print("Checking the last updated date")
                     last_updated_date = pd.read_csv(filename, header=None, quoting=csv.QUOTE_NONNUMERIC).iloc[-1, 0]
                     current_dataframe = pd.read_csv(filename, header=None, quoting=csv.QUOTE_NONNUMERIC,names=['Date','Close','High','Low','Open','Volume'],on_bad_lines='skip',date_format="%Y-%m-%d")
@@ -250,7 +251,7 @@ class scrapper():
                                 df = ticker.history(period='5y', auto_adjust=True)
                                 # print("retreived the data for 5 years")
                                 # print(df)
-                                # print(df)
+                                print(df)
 
                 
                 
@@ -268,10 +269,12 @@ class scrapper():
 
                 # df = pdr.get_data_yahoo(indexes,start="2019-1-1",end= current_datetime)
                 if df.empty:
-                    print("Something is wrong")
+                    print("Something is wrong. The dataset failed to fetch.")
+                    time.sleep(1)
                     continue
                 else:
                     print(indexes+" finished downloading")
+                    ## current problem didn't save or further processing
                 # break
                 # df = pdr.get_data_yahoo('0'*(6-len(str(indexes+1)))+str(indexes+1)+ "." + place, start="2019-1-1", end=current_datetime,proxy="202.86.138.18:8080") #proxy="173.244.200.156:64631"
             except requests.exceptions.RequestException as e:
@@ -324,106 +327,131 @@ class scrapper():
                     # print(i)
                     # continue
                     for j in df:
+                        if j == 'Date':
+                            continue
                         if type(df.loc[i,j]) == pd.Timestamp:
                             continue
-                        df.loc[i,j] = round(float(df.loc[i,j]),2)
+                        try:
+                            df.loc[i,j] = round(float(df.loc[i,j]),2)
+                        except Exception:
+                            continue
                 
-                # print(df)
+                print("After modification")
+                print(df)
                 df = df.astype(str)
                 filename = 'stock_data/'+str(area)+"/"+indexes+'.txt'
+                print("Turning to csv")
                 df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,mode="w",index=False)
 
                 continue
-            else:
+            # else:
                 
-                try:
+            #     try:
 
-                    if len(df) != 0:
-                        # print(df)
-                        if 'Dividends' in df.columns:
-                            df.drop(['Dividends'],axis = 1, inplace=True)
-                        if 'Stock Splits' in df.columns:
-                            df.drop(['Stock Splits'],axis = 1, inplace=True)
+            #         if len(df) != 0:
+            #             # print(df)
+            #             if 'Dividends' in df.columns:
+            #                 df.drop(['Dividends'],axis = 1, inplace=True)
+            #             if 'Stock Splits' in df.columns:
+            #                 df.drop(['Stock Splits'],axis = 1, inplace=True)
 
-                        if 'Capital Gains' in df.columns:
-                            df.drop(['Capital Gains'],axis = 1, inplace=True)
+            #             if 'Capital Gains' in df.columns:
+            #                 df.drop(['Capital Gains'],axis = 1, inplace=True)
                     
-                        # df = df[['Close','High','Low','Open','Volume']]
+            #             # df = df[['Close','High','Low','Open','Volume']]
 
-                        for i in df.index:
-                            for j in df:
-                                if type(df.loc[i,j]) == pd.Timestamp:
-                                    continue
-                                df.loc[i,j] = round(float(df.loc[i,j]),2)
+            #             for i in df.index:
+            #                 for j in df:
+            #                     if j == 'Date':
+            #                         continue
+            #                     if type(df.loc[i,j]) == pd.Timestamp:
+            #                         continue
+            #                     try:
+            #                         df.loc[i,j] = round(float(df.loc[i,j]),2)
+            #                     except Exception:
+            #                         continue
                         
-                        df = df.reset_index().rename(columns={"index":"Date"})
-                        
-                        # print(df)
-                        # df.drop(['Dividends'],axis = 1, inplace=True)
-                        # df.drop(['Stock Splits'],axis = 1, inplace=True)
+            #             try:
+            #                 df = df.reset_index(drop=True)
+            #             except ValueError as e:
+            #                 if 'level_0' in str(e) or 'level_0' in df.columns:
+            #                     if 'level_0' in df.columns:
+            #                         df = df.rename(columns={'level_0': 'level_0_old'})
+            #                     df = df.reset_index(drop=True)
+            #                 else:
+            #                     raise
+            #             if 'Date' not in df.columns:
+            #                 if 'index' in df.columns:
+            #                     df = df.rename(columns={'index': 'Date'})
+            #                 else:
+            #                     df = df.rename(columns={df.columns[0]: 'Date'})
+            #             df['Date'] = pd.to_datetime(df['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
+            #             # df.drop(['Dividends'],axis = 1, inplace=True)
+            #             # df.drop(['Stock Splits'],axis = 1, inplace=True)
 
-                        if 'Capital Gains' in df.columns:
-                            df.drop(['Capital Gains'],axis = 1, inplace=True)
+            #             if 'Capital Gains' in df.columns:
+            #                 df.drop(['Capital Gains'],axis = 1, inplace=True)
                     
-                        # print('The original dataframe')
-                        current_dataframe.drop_duplicates(subset='Date',inplace=True, ignore_index=True)
-                        current_dataframe['Date'] = pd.to_datetime(current_dataframe['Date'])
+            #             # print('The original dataframe')
+            #             current_dataframe.drop_duplicates(subset='Date',inplace=True, ignore_index=True)
+            #             current_dataframe['Date'] = pd.to_datetime(current_dataframe['Date'], format='%Y-%m-%d', errors='coerce')
                         
-                        # print(current_dataframe)
-                        # print("The about to update dataframe")
-                        # print(df)
+            #             # print(current_dataframe)
+            #             # print("The about to update dataframe")
+            #             # print(df)
 
-                        # for col in current_dataframe.select_dtypes(['datetimetz']).columns:
-                        #     current_dataframe[col] = current_dataframe[col].dt.tz_localize(None)
+            #             # for col in current_dataframe.select_dtypes(['datetimetz']).columns:
+            #             #     current_dataframe[col] = current_dataframe[col].dt.tz_localize(None)
 
-                        for col in df.select_dtypes(['datetimetz']).columns:
-                            df[col] = df[col].dt.tz_localize(None)
+            #             for col in df.select_dtypes(['datetimetz']).columns:
+            #                 df[col] = df[col].dt.tz_localize(None)
 
-                        # print("Old")
-                        # print(current_dataframe['Date'])
-                        # print("New")
-                        # print(df['Date'])
+            #             # print("Old")
+            #             # print(current_dataframe['Date'])
+            #             # print("New")
+            #             # print(df['Date'])
 
-                        ## Here cause the trouble afterward
+            #             ## Here cause the trouble afterward
 
-                        # print(pd.concat([current_dataframe, df],ignore_index=True))
+            #             # print(pd.concat([current_dataframe, df],ignore_index=True))
                         
-                        current_dataframe= pd.concat([current_dataframe, df],ignore_index=True)
-                        # current_dataframe['Date']=pd.to_datetime(current_dataframe['Date'], format='%Y-%m-%d', errors='coerce')
-                        print(current_dataframe)
-                        current_dataframe=current_dataframe.drop_duplicates(subset='Date', inplace=False, ignore_index=True,keep='last')
-                        current_dataframe.dropna(inplace=True)
-                        for col in current_dataframe.select_dtypes(['datetimetz']).columns:
-                            current_dataframe[col] = current_dataframe[col].dt.tz_localize(None)
+            #             current_dataframe= pd.concat([current_dataframe, df],ignore_index=True)
+            #             # current_dataframe['Date']=pd.to_datetime(current_dataframe['Date'], format='%Y-%m-%d', errors='coerce')
+            #             print(current_dataframe)
+            #             current_dataframe=current_dataframe.drop_duplicates(subset='Date', inplace=False, ignore_index=True,keep='last')
+            #             current_dataframe.dropna(inplace=True)
+            #             for col in current_dataframe.select_dtypes(['datetimetz']).columns:
+            #                 current_dataframe[col] = current_dataframe[col].dt.tz_localize(None)
 
-                        # print(current_dataframe)
+            #             # print(current_dataframe)
 
-                        # print("the integrated dataframe")
-                        # print(current_dataframe)
-                        current_dataframe = current_dataframe.astype(str)
-                        df = current_dataframe
-                        # print("The final dataframe")
-                        # print(df)
-                        # break
+            #             # print("the integrated dataframe")
+            #             # print(current_dataframe)
+            #             current_dataframe = current_dataframe.astype(str)
+            #             df = current_dataframe
+            #             # print("The final dataframe")
+            #             # print(df)
+            #             # break
 
-                        # print(df)
-                        filename = 'stock_data/'+str(area)+"/"+indexes+'.txt'
-                        if Path(filename).exists() == False or refreshing:
-                            Path("stock_data").mkdir(parents=True, exist_ok=True)
-                            Path("stock_data/"+str(area)).mkdir(parents=True, exist_ok=True)
-                            df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,index=False)
-                        else:
-                            df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,mode="w",index=False)
+            #             # print(df)
+            #             filename = 'stock_data/'+str(area)+"/"+indexes+'.txt'
+            #             if Path(filename).exists() == False or refreshing:
+            #                 Path("stock_data").mkdir(parents=True, exist_ok=True)
+            #                 Path("stock_data/"+str(area)).mkdir(parents=True, exist_ok=True)
+            #                 df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,index=False)
+            #             else:
+            #                 df.to_csv('stock_data/'+str(area)+"/"+indexes+'.txt', header = False, quoting=csv.QUOTE_NONNUMERIC,mode="w",index=False)
 
-                        # time.sleep(1)  # Sleep for 1 second to avoid hitting the rate limit
-                    else:
-                        print("This Code Doesn't Exist")
-                except Exception as e:
-                    print(f"An error occurred while processing {indexes}: {e}")
-                    print("Skipping this index")
-                    continue
+            #             time.sleep(1)  # Sleep for 1 second to avoid hitting the rate limit
+            #         else:
+            #             print("This Code Doesn't Exist")
+            #     except Exception as e:
+            #         print(f"An error occurred while processing {indexes}: {e}")
+            #         print("Skipping this index")
+            #         continue
             finally:
                 print("Loading Next Data")
+                time.sleep(1)
 
     def America(self,full_scale=False):
         f=open(self.stock_price_america,'r',encoding="utf8")
@@ -471,7 +499,7 @@ class scrapper():
         self.shenzhen()
 
 def main():
-    s = scrapper()
+    s = scrapper("America")
     s.America()
     # s.shenzhen()
     # s.shanghai()
@@ -595,12 +623,13 @@ class scapper_with_thread(scrapper):
                 # df = df[['Close','High','Low','Open','Volume']]
                 # print(df)
                 for i in df.index:
-                    # print(i)
-                    # if i == 'Date':
-                    #     continue
                     for j in df:
-                        # print(j)
-                        df.loc[i,j] = round(float(df.loc[i,j]),2)
+                        if j == 'Date':
+                            continue
+                        try:
+                            df.loc[i,j] = round(float(df.loc[i,j]),2)
+                        except Exception:
+                            continue
                 
                 # print(df)
                 df = df.astype(str)
@@ -609,7 +638,9 @@ class scapper_with_thread(scrapper):
 
                 continue
             else:
-                
+                print("Now creating the files")
+                df = yf.download(indexes, period="5y", auto_adjust=True, session=session, progress=False, threads=True,multi_level_index=False )
+
                 try:
 
                     if len(df) != 0:
@@ -625,17 +656,33 @@ class scapper_with_thread(scrapper):
                             df.drop(['Capital Gains'],axis = 1, inplace=True)
                     
                         # df = df[['Close','High','Low','Open','Volume']]
+                        print(df)
 
                         for i in df.index:
-                            # print(i)
-                            # print(type(i))
-                            # if type(i) == pd.Timestamp:
-                            #     continue
                             for j in df:
-                                df.loc[i,j] = round(float(df.loc[i,j]),2)
+                                if j == 'Date':
+                                    continue
+                                if type(df.loc[i,j]) == float or type(df.loc[i,j]) == pd.Timestamp:
+                                    try:
+                                        df.loc[i,j] = round(float(df.loc[i,j]),2)
+                                    except Exception:
+                                        continue
                         
-                        df = df.reset_index().rename(columns={"index":"Date"})
-                        df['Date'] = pd.to_datetime(df['Date'], format='%Y-%m-%d', errors='coerce')
+                        try:
+                            df = df.reset_index(drop=True)
+                        except ValueError as e:
+                            if 'level_0' in str(e) or 'level_0' in df.columns:
+                                if 'level_0' in df.columns:
+                                    df = df.rename(columns={'level_0': 'level_0_old'})
+                                df = df.reset_index()
+                            else:
+                                raise
+                        if 'Date' not in df.columns:
+                            if 'index' in df.columns:
+                                df = df.rename(columns={'index': 'Date'})
+                            else:
+                                df = df.rename(columns={df.columns[0]: 'Date'})
+                        df['Date'] = pd.to_datetime(df['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
                         
                         # print(df)
                         # df.drop(['Dividends'],axis = 1, inplace=True)
@@ -678,14 +725,12 @@ class scapper_with_thread(scrapper):
                         # time.sleep(1)  # Sleep for 1 second to avoid hitting the rate limit
                     else:
                         print("This Code Doesn't Exist")
-                except ValueError as ve:
-                    print(f"ValueError occurred while processing {indexes}: {ve}")
-                    print("Skipping this index")
-                    continue
-                # except Exception as e:
-                #     print(f"An error occurred while processing {indexes}: {e}")
+                # except ValueError as ve:
+                #     print(f"ValueError occurred while processing {indexes}: {ve}")
                 #     print("Skipping this index")
                 #     continue
+                finally:
+                    print("Loading Next Data")
             finally:
                 print("Loading Next Data")
 
@@ -693,11 +738,12 @@ class scapper_with_thread(scrapper):
 if __name__ == "__main__":
     import sys,time
 
-    time1 = time.time_ns()
+    # time1 = time.time_ns()
+    main()
 
-    s= scapper_with_thread(area="America")
-    time2 = time.time_ns()
-    print("Time taken: ", (time2 - time1) / 1e9, "seconds")
+    # s= scapper_with_thread(area="America")
+    # time2 = time.time_ns()
+    # print("Time taken: ", (time2 - time1) / 1e9, "seconds")
 
     # time1 = time.time_ns()
     # if len(sys.argv) == 2:
