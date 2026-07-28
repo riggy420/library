@@ -23,7 +23,13 @@ from .orders import OrderService
 from .positions import PositionService
 from .config import Config
 from .exceptions import IBPaperError, ConnectionError, ConfigError, OrderError
-from .types import OrderAction, OrderType, OrderStatus, ConnectionState, OrderRequest, PositionInfo, AccountSnapshot
+from .types import (
+    OrderAction, OrderType, OrderStatus, ConnectionState,
+    OrderRequest, PositionInfo, AccountSnapshot,
+    AlertCondition, AlertField, AlertOperator, AlertMode, Subscription,
+)
+from .alerts import AlertEngine, AlertRegistry, AlertError
+from .watchlist import WatchlistMonitor
 
 __all__ = [
     "ConnectionManager",
@@ -35,6 +41,7 @@ __all__ = [
     "ConnectionError",
     "ConfigError",
     "OrderError",
+    "AlertError",
     "OrderAction",
     "OrderType",
     "OrderStatus",
@@ -42,4 +49,12 @@ __all__ = [
     "OrderRequest",
     "PositionInfo",
     "AccountSnapshot",
+    "AlertEngine",
+    "AlertRegistry",
+    "AlertCondition",
+    "AlertField",
+    "AlertOperator",
+    "AlertMode",
+    "Subscription",
+    "WatchlistMonitor",
 ]

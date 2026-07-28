@@ -1,0 +1,13 @@
+# Alert Watchlist
+# Format: TICKER THRESHOLD [FIELD]
+# Lines starting with # are ignored.
+# The alert engine auto-subscribes new entries and unsubscribes removed ones.
+# Populated by the backtest server or edited by hand.
+#
+# Example:
+#   AAPL 200.0
+#   TSLA 180.0 bid
+#   MSFT 450.0
+#
+AAPL 200.0 last
+MSFT 450.0 last

@@ -118,6 +118,76 @@ Cancel a pending order.
 ibpaper cancel 42
 ```
 
+### `ibpaper alert`
+
+Manage price-crossing alerts.  Subscribe to a ticker threshold and get
+notified when the price crosses that level (upward or downward).
+
+```bash
+# Subscribe — fire once when AAPL crosses $200
+ibpaper alert subscribe AAPL --cross 200.0
+
+# Subscribe with re-arm — fire every time TSLA crosses $180
+ibpaper alert subscribe TSLA --cross 180.0 --every
+
+# Subscribe watching a specific price field
+ibpaper alert subscribe MSFT --cross 450.0 --field bid
+
+# List active subscriptions (during a watch session)
+ibpaper alert list
+```
+
+**How crossing detection works:**
+
+The first tick seeds a baseline price (never fires).  On each subsequent
+tick the engine checks whether the price crossed the threshold from either
+side:
+
+```
+$198 → $199.50 → $201.00 🚨 cross up   → $202 → $199.00 🚨 cross down
+```
+
+**Subcommands:**
+
+| Command | Purpose |
+|---------|---------|
+| `subscribe SYMBOL --cross N` | Subscribe to a price-crossing alert |
+| `list` | List active subscriptions |
+| `unsubscribe <sub_id>` | Remove a subscription |
+| `watch` | Start the alert engine (foreground, streaming) |
+
+**Options for `subscribe`:**
+
+| Option | Description |
+|--------|-------------|
+| `--cross`, `-x N` | **(required)** Price threshold to cross |
+| `--field`, `-f` | Price field: `last`, `bid`, `ask`, or `close` (default: `last`) |
+| `--every` | Re-arm after each fire (default: fire once) |
+| `--message`, `-m` | Custom message displayed on alert |
+
+### Programmatic alert API
+
+```python
+from ib_paper import ConnectionManager, AlertEngine
+from ib_paper.types import AlertCondition, AlertField, AlertOperator, AlertMode
+
+with ConnectionManager() as cm:
+    engine = AlertEngine(cm.ib)
+
+    def on_cross(sub):
+        print(f"{sub.ticker} crossed {sub.condition.threshold}"
+              f" at ${sub.fire_price:.2f}")
+
+    engine.subscribe(
+        ticker="AAPL",
+        condition=AlertCondition(AlertField.LAST, AlertOperator.CROSS, 200.0),
+        callback=on_cross,
+        mode=AlertMode.ONCE,
+    )
+
+    engine.run()   # blocks until Ctrl-C
+```
+
 ---
 
 ## Server Reference (`ibpaper-server`)

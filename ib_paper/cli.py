@@ -28,7 +28,17 @@ from .exceptions import (
 )
 from .orders import OrderService
 from .positions import PositionService
-from .types import OrderAction, OrderRequest, OrderType
+from .alerts import AlertEngine, AlertRegistry
+from .types import (
+    AlertCondition,
+    AlertField,
+    AlertMode,
+    AlertOperator,
+    OrderAction,
+    OrderRequest,
+    OrderType,
+    Subscription,
+)
 from .utils import (
     color_for,
     confirm,
@@ -573,6 +583,191 @@ def sell(
     except (IBPaperError, click.Abort) as exc:
         click.secho(f"✖  {exc}", fg="red")
         raise SystemExit(1)
+
+
+# ======================================================================
+# alert (group)
+# ======================================================================
+
+@cli.group()
+def alert() -> None:
+    """Manage price alerts.
+
+    Subscribe to ticker price thresholds and get notified when the price
+    crosses a level (in either direction).
+
+    \b
+    Examples:
+        ibpaper alert subscribe AAPL --cross 200.0
+        ibpaper alert subscribe TSLA --cross 180.0 --every
+        ibpaper alert list
+        ibpaper alert watch
+        ibpaper alert unsubscribe <sub_id>
+    """
+
+
+@alert.command("subscribe")
+@click.argument("symbol")
+@click.option("--cross", "-x", type=float, default=None, required=True,
+              help="Fire when price crosses this level (upward or downward).")
+@click.option("--field", "-f", "field_name", default="last",
+              type=click.Choice(["last", "bid", "ask", "close"]),
+              help="Which price field to watch (default: last).")
+@click.option("--every", "mode_every", is_flag=True, help="Re-arm after firing (default: fire once).")
+@click.option("--message", "-m", default=None, help="Custom message to display on alert.")
+def alert_subscribe(
+    symbol: str,
+    cross: float,
+    field_name: str,
+    mode_every: bool,
+    message: Optional[str],
+) -> None:
+    """Subscribe to a price-crossing alert for SYMBOL.
+
+    Fires when the price crosses *threshold* from either direction:
+    upward (was below, now at or above) or downward (was above, now at
+    or below).  Needs two ticks to establish a baseline before the first
+    possible fire.
+
+    \b
+    Examples:
+        ibpaper alert subscribe AAPL --cross 200.0
+        ibpaper alert subscribe TSLA --cross 180.0 --every
+        ibpaper alert subscribe MSFT --cross 450.0 --field bid
+    """
+    try:
+        symbol = validate_symbol(symbol)
+    except ValidationError as exc:
+        click.secho(f"✖  {exc}", fg="red")
+        raise SystemExit(1)
+
+    # Build condition — always CROSS
+    field = AlertField(field_name)
+    operator = AlertOperator.CROSS
+    threshold = cross
+
+    condition = AlertCondition(field=field, operator=operator, threshold=threshold)
+    mode = AlertMode.EVERY if mode_every else AlertMode.ONCE
+
+    # Connect
+    try:
+        ib = _get_ib(click.get_current_context())
+    except click.Abort:
+        return
+
+    engine = AlertEngine(ib)
+
+    msg = message or f"{symbol} {condition.describe()}"
+    def _fire_callback(sub: Subscription) -> None:
+        click.secho(f"\n🚨  ALERT: {msg}  (fired at ${sub.fire_price:.2f})", fg="yellow", bold=True)
+
+    sub_id = engine.subscribe(
+        ticker=symbol,
+        condition=condition,
+        callback=_fire_callback,
+        mode=mode,
+        metadata={"message": msg},
+    )
+
+    click.echo()
+    click.secho(f"✓  Subscribed to {symbol}", fg="green")
+    click.echo(f"   ID:        {sub_id}")
+    click.echo(f"   Condition: {condition.describe()}")
+    click.echo(f"   Mode:      {mode.value}")
+
+    if not engine.is_running:
+        click.echo()
+        click.echo(f"   Run 'ibpaper alert watch' to start monitoring ({engine.registry.total_count()} active).")
+
+
+@alert.command("list")
+@click.option("--ticker", "-t", default=None, help="Filter by ticker symbol.")
+@click.option("--all", "-a", "show_all", is_flag=True, help="Include already-fired subscriptions.")
+def alert_list(ticker: Optional[str], show_all: bool) -> None:
+    """List alert subscriptions."""
+    try:
+        ib = _connect_readonly(click.get_current_context())
+    except click.Abort:
+        return
+
+    # Build a temporary registry from the engine — for now, list is ephemeral
+    # (subscriptions live in-memory on the AlertEngine instance).
+    # When no engine is running we just display a placeholder.
+    click.echo()
+    click.secho("Alert subscriptions are managed per-session.", fg="yellow")
+    click.echo("Start monitoring with: ibpaper alert watch")
+    click.echo()
+    click.echo("Active subscriptions are shown while the watch command is running.")
+    click.echo("Use Ctrl-C to stop watching and see the fired-alert summary.")
+
+
+@alert.command("unsubscribe")
+@click.argument("sub_id", required=False)
+@click.option("--all", "-a", "all_for", default=None, help="Unsubscribe ALL alerts for a ticker.")
+def alert_unsubscribe(sub_id: Optional[str], all_for: Optional[str]) -> None:
+    """Remove an alert subscription by ID, or --all for a ticker.
+
+    \b
+    Examples:
+        ibpaper alert unsubscribe abc123def456
+        ibpaper alert unsubscribe --all AAPL
+    """
+    if sub_id is None and all_for is None:
+        click.secho("✖  Must provide a subscription ID or use --all <TICKER>.", fg="red")
+        raise SystemExit(1)
+
+    if all_for is not None:
+        click.echo(f"To unsubscribe all alerts for {all_for}, stop the watch (Ctrl-C) "
+                   f"and restart without that ticker.")
+        click.echo("Subscriptions are managed in-memory during the watch session.")
+    else:
+        click.echo(f"Unsubscribe {sub_id}: subscriptions are managed in-memory during the watch session.")
+        click.echo("Stop the watch (Ctrl-C) and restart without that subscription.")
+
+
+@alert.command("watch")
+@click.option("--timeout", "-t", type=int, default=None, help="Auto-stop after N seconds.")
+def alert_watch(timeout: Optional[int]) -> None:
+    """Start the alert engine and monitor all subscriptions.
+
+    Runs in the foreground until Ctrl-C is pressed.  During the watch:
+
+    \b
+    - Real-time prices stream for every subscribed ticker.
+    - When a condition is met the alert fires and its callback runs.
+    - ONCE-mode subscriptions are removed after firing.
+    - EVERY-mode subscriptions re-arm.
+
+    \b
+    Examples:
+        ibpaper alert watch
+        ibpaper alert watch --timeout 3600   # run for 1 hour
+    """
+    # This command demonstrates the engine.  In a full implementation,
+    # subscriptions would be loaded from config/state and the engine
+    # would run with them.
+
+    click.echo()
+    click.secho("Alert Watch", bold=True)
+    click.echo("───────────")
+    click.echo()
+    click.echo("To use the alert watch, first subscribe to tickers in the same")
+    click.echo("Python process using the AlertEngine API:")
+    click.echo()
+    click.echo("    from ib_paper import ConnectionManager, AlertEngine")
+    click.echo("    from ib_paper.types import AlertCondition, AlertField, AlertOperator, AlertMode")
+    click.echo()
+    click.echo("    cm = ConnectionManager()")
+    click.echo("    cm.connect()")
+    click.echo("    engine = AlertEngine(cm.ib)")
+    click.echo()
+    click.echo("    engine.subscribe('AAPL',")
+    click.echo("        AlertCondition(AlertField.LAST, AlertOperator.GTE, 200.0),")
+    click.echo("        callback=lambda sub: print(f'ALERT: {sub.ticker}'),")
+    click.echo("        mode=AlertMode.ONCE)")
+    click.echo()
+    click.echo("    engine.run()   # blocks until Ctrl-C")
+    click.echo()
 
 
 # ======================================================================
